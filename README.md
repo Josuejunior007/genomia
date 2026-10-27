@@ -105,7 +105,7 @@ Essa versão é um MVP para validar a ideia e demonstrar a estrutura do backend.
 
 As sugestões do sistema não são aplicadas automaticamente ao banco. A ideia é que sejam analisadas e validadas antes de qualquer mudança.
 
-Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
+Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco. Consulte [`docs/postgres-read-only.md`](docs/postgres-read-only.md) e execute o script [`scripts/postgres_readonly.sql`](scripts/postgres_readonly.sql) para provisionar e verificar um papel PostgreSQL dedicado de leitura.
 
 ## Resumindo
 
