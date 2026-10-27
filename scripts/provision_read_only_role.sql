@@ -1,7 +1,9 @@
 -- Provisiona a role de runtime genomia_reader com acesso de leitura.
--- Execute conectado ao banco alvo, como owner/admin. Não coloque senha neste arquivo.
--- Após criar a role, psql pedirá a senha com entrada oculta (password).
+-- Execute conectado ao banco alvo, como owner/admin. Nunca armazene senha aqui.
+-- psql solicitará a senha com entrada oculta.
 \set ON_ERROR_STOP on
+\set target_schema public
+SELECT current_database() AS target_database \gset
 
 DO $$
 BEGIN
@@ -17,28 +19,23 @@ ALTER ROLE genomia_reader
 
 \password genomia_reader
 
--- Ajuste public para o schema realmente lido pelo backend antes de executar.
-GRANT CONNECT ON DATABASE postgres TO genomia_reader;
-GRANT USAGE ON SCHEMA public TO genomia_reader;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO genomia_reader;
+-- Para outro schema, altere target_schema acima e use o mesmo valor em DB_SCHEMA.
+GRANT CONNECT ON DATABASE :"target_database" TO genomia_reader;
+GRANT USAGE ON SCHEMA :"target_schema" TO genomia_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA :"target_schema" TO genomia_reader;
 
--- information_schema é fornecido pelo PostgreSQL; a introspeção revela apenas
--- objetos que a role já pode acessar. Conceder USAGE/SELECT permite consultar
--- os metadados expostos pelo servidor sem habilitar escrita.
-GRANT USAGE ON SCHEMA information_schema TO genomia_reader;
-GRANT SELECT ON ALL TABLES IN SCHEMA information_schema TO genomia_reader;
-
--- Execute este comando como CADA role que cria tabelas no schema alvo,
--- para que tabelas futuras também recebam SELECT.
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
+-- Execute como cada role que cria tabelas no schema para conceder SELECT
+-- também sobre tabelas futuras.
+ALTER DEFAULT PRIVILEGES IN SCHEMA :"target_schema"
     GRANT SELECT ON TABLES TO genomia_reader;
 
--- Remove privilégios de escrita diretos em objetos existentes no schema alvo.
+-- Remove privilégios diretos de escrita na role de runtime.
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
-    ON ALL TABLES IN SCHEMA public FROM genomia_reader;
-REVOKE CREATE ON SCHEMA public FROM genomia_reader;
+    ON ALL TABLES IN SCHEMA :"target_schema" FROM genomia_reader;
+REVOKE CREATE ON SCHEMA :"target_schema" FROM genomia_reader;
 
--- A role de runtime não deve pertencer a roles adicionais. Confira e remova
--- qualquer membership preexistente antes de usar:
+-- information_schema é fornecido pelo PostgreSQL; não altere suas permissões.
+-- Sua visibilidade de metadados segue os objetos que a role pode acessar.
+-- Confirme que a role não tem memberships adicionais:
 -- SELECT pg_get_userbyid(roleid) AS granted_role
 -- FROM pg_auth_members WHERE member = 'genomia_reader'::regrole;
