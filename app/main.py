@@ -30,6 +30,7 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSON
             "detail": "API ativa, mas o banco de dados está indisponível. Tente novamente mais tarde.",
             "code": "database_unavailable",
         },
+
     )
 
 
