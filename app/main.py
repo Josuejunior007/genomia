@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.session import engine
+from app.db.permissions import validate_read_only
 
 app = FastAPI(
     title=settings.app_name,
@@ -12,6 +13,12 @@ app = FastAPI(
     description="MVP demonstrativo do GenomAI: catálogo, análise determinística e revisão humana. Sugestões nunca são executadas automaticamente."
 )
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.on_event("startup")
+def enforce_read_only_database_role() -> None:
+    """Do not serve requests if the runtime database role can write."""
+    validate_read_only(engine, settings.db_schema)
 
 
 @app.exception_handler(SQLAlchemyError)
