@@ -1,42 +1,36 @@
--- Provisiona a role de runtime genomia_reader com acesso de leitura.
--- Execute conectado ao banco alvo, como owner/admin. Nunca armazene senha aqui.
--- psql solicitará a senha com entrada oculta.
-\set ON_ERROR_STOP on
-\set target_schema public
-SELECT current_database() AS target_database \gset
-
+-- Provisiona a role de runtime para leitura. Este arquivo é SQL padrão,
+-- compatível com o SQL Editor do Supabase, DataGrip e outros clientes gráficos.
+-- Não coloque senha neste arquivo. Crie/defina a senha pelo painel Supabase
+-- Database > Roles antes de configurar DATABASE_URL.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genomia_reader') THEN
-        CREATE ROLE genomia_reader LOGIN;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genomia_reader_app') THEN
+        CREATE ROLE genomia_reader_app LOGIN NOINHERIT;
     END IF;
 END
 $$;
 
-ALTER ROLE genomia_reader
-    LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
-    NOREPLICATION NOBYPASSRLS;
+-- Supabase normalmente conecta ao banco "postgres". Se o banco alvo tiver outro
+-- nome, substitua postgres pelo nome literal antes de executar.
+GRANT CONNECT ON DATABASE postgres TO genomia_reader_app;
 
-\password genomia_reader
+-- Mantenha este schema igual a DB_SCHEMA no .env.
+GRANT USAGE ON SCHEMA public TO genomia_reader_app;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO genomia_reader_app;
 
--- Para outro schema, altere target_schema acima e use o mesmo valor em DB_SCHEMA.
-GRANT CONNECT ON DATABASE :"target_database" TO genomia_reader;
-REVOKE CREATE ON DATABASE :"target_database" FROM genomia_reader;
-GRANT USAGE ON SCHEMA :"target_schema" TO genomia_reader;
-GRANT SELECT ON ALL TABLES IN SCHEMA :"target_schema" TO genomia_reader;
+-- Execute também como CADA role que cria tabelas em public, para que novos
+-- objetos recebam SELECT automaticamente (privilégios padrão são por owner).
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT ON TABLES TO genomia_reader_app;
 
--- Execute como cada role que cria tabelas no schema para conceder SELECT
--- também sobre tabelas futuras.
-ALTER DEFAULT PRIVILEGES IN SCHEMA :"target_schema"
-    GRANT SELECT ON TABLES TO genomia_reader;
-
--- Remove privilégios diretos de escrita na role de runtime.
+-- Remove privilégios diretos de escrita nessa role nas tabelas existentes.
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
-    ON ALL TABLES IN SCHEMA :"target_schema" FROM genomia_reader;
-REVOKE CREATE ON SCHEMA :"target_schema" FROM genomia_reader;
+    ON ALL TABLES IN SCHEMA public FROM genomia_reader_app;
+REVOKE CREATE ON SCHEMA public FROM genomia_reader_app;
 
--- information_schema é fornecido pelo PostgreSQL; não altere suas permissões.
--- Sua visibilidade de metadados segue os objetos que a role pode acessar.
--- Confirme que a role não tem memberships adicionais:
+-- A role não pode ter memberships adicionais. Confira:
 -- SELECT pg_get_userbyid(roleid) AS granted_role
--- FROM pg_auth_members WHERE member = 'genomia_reader'::regrole;
+-- FROM pg_auth_members
+-- WHERE member = 'genomia_reader_app'::regrole;
+
+-- Depois de aplicar, rode: python -m scripts.check_read_only
