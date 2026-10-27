@@ -41,12 +41,12 @@ a URL da role administrativa. Proteja e faça rotação da senha pelo secret man
 ## O que a validação confirma
 
 O comando verifica se a conexão é PostgreSQL, testa a consulta a
-`information_schema`, confirma `USAGE` e ausência de `CREATE` no schema e no
-banco, e rejeita roles administrativas, memberships e privilégios efetivos de
-INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER (inclusive grants por coluna)
-nas tabelas do schema. O backend executa a mesma validação no startup e não
-inicia se a checagem falhar. O comando retorna código de saída diferente de zero
-quando falha.
+`information_schema`, confirma `USAGE`, `SELECT` em todas as tabelas/visões do
+schema e ausência de `CREATE` no schema e no banco. Também rejeita roles
+administrativas, memberships e privilégios efetivos de INSERT/UPDATE/DELETE/
+TRUNCATE/REFERENCES/TRIGGER (inclusive grants por coluna). O backend executa a
+mesma validação no startup e não inicia se a checagem falhar. O comando retorna
+código de saída diferente de zero quando falha.
 
 O SQL concede SELECT nas tabelas existentes e registra privilégios padrão para
 tabelas futuras criadas pelos owners configurados. Objetos criados por outros
