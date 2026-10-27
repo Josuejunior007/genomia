@@ -6,9 +6,10 @@ from app.db.permissions import CHECK_SQL, validate_read_only
 from scripts.check_read_only import main
 
 
-def test_check_query_covers_role_database_schema_and_table_write_privileges():
+def test_check_query_covers_role_membership_database_schema_and_table_privileges():
     sql = str(CHECK_SQL).lower()
     assert "rolsuper" in sql
+    assert "pg_auth_members" in sql
     assert "has_database_privilege" in sql
     assert "has_schema_privilege" in sql
     assert "has_table_privilege" in sql
@@ -26,6 +27,7 @@ def configured_engine(result):
 def test_validator_succeeds_for_read_only_role():
     engine = configured_engine({
         "elevated_role": False,
+        "has_memberships": False,
         "schema_usage": True,
         "schema_create": False,
         "database_create": False,
@@ -42,12 +44,14 @@ def test_validator_succeeds_for_read_only_role():
         {"schema_create": True},
         {"database_create": True},
         {"elevated_role": True},
+        {"has_memberships": True},
         {"schema_usage": False},
     ],
 )
 def test_validator_rejects_unsafe_permissions(overrides):
     result = {
         "elevated_role": False,
+        "has_memberships": False,
         "schema_usage": True,
         "schema_create": False,
         "database_create": False,
