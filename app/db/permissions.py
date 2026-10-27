@@ -20,6 +20,14 @@ SELECT
         JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = :schema
           AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+          AND NOT has_table_privilege(current_user, c.oid, 'SELECT')
+    ) AS has_unreadable_tables,
+    EXISTS (
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = :schema
+          AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
           AND (
               has_table_privilege(current_user, c.oid, 'INSERT')
               OR has_table_privilege(current_user, c.oid, 'UPDATE')
@@ -52,6 +60,8 @@ def validate_read_only(engine: Engine, schema: str) -> None:
         problems.append(f"falta USAGE no schema {schema!r}")
     if result["schema_create"] or result["database_create"]:
         problems.append("permissão para criar objetos")
+    if result["has_unreadable_tables"]:
+        problems.append(f"falta SELECT em tabelas do schema {schema!r}")
     if result["has_write_access"]:
         problems.append(f"permissão de escrita no schema {schema!r}")
     if problems:
