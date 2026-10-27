@@ -1,13 +1,16 @@
 """Fail-closed validation of PostgreSQL runtime permissions."""
 
 from sqlalchemy import text
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.engine import Engine
 
 
 CHECK_SQL = text("""
 SELECT
     r.rolsuper OR r.rolcreatedb OR r.rolcreaterole
         OR r.rolreplication OR r.rolbypassrls AS elevated_role,
+    EXISTS (
+        SELECT 1 FROM pg_auth_members m WHERE m.member = r.oid
+    ) AS has_memberships,
     has_schema_privilege(current_user, :schema, 'USAGE') AS schema_usage,
     has_schema_privilege(current_user, :schema, 'CREATE') AS schema_create,
     has_database_privilege(current_user, current_database(), 'CREATE') AS database_create,
@@ -28,19 +31,23 @@ SELECT
               OR has_any_column_privilege(current_user, c.oid, 'UPDATE')
           )
     ) AS has_write_access
+FROM pg_roles r
+WHERE r.rolname = current_user
 """)
 
 
-def validate_read_only(connection: Connection | Engine, schema: str) -> None:
+def validate_read_only(engine: Engine, schema: str) -> None:
     """Raise RuntimeError unless the active PostgreSQL role is read-only."""
-    if connection.dialect.name != "postgresql":
+    if engine.dialect.name != "postgresql":
         raise RuntimeError("A validação de permissões requer PostgreSQL.")
-    with connection.connect() if isinstance(connection, Engine) else _existing(connection) as conn:
-        result = conn.execute(CHECK_SQL, {"schema": schema}).mappings().one()
-        conn.execute(text("SELECT table_name FROM information_schema.tables LIMIT 0"))
+    with engine.connect() as connection:
+        result = connection.execute(CHECK_SQL, {"schema": schema}).mappings().one()
+        connection.execute(text("SELECT table_name FROM information_schema.tables LIMIT 0"))
     problems = []
     if result["elevated_role"]:
         problems.append("atributo administrativo")
+    if result["has_memberships"]:
+        problems.append("membership em outra role")
     if not result["schema_usage"]:
         problems.append(f"falta USAGE no schema {schema!r}")
     if result["schema_create"] or result["database_create"]:
@@ -49,16 +56,3 @@ def validate_read_only(connection: Connection | Engine, schema: str) -> None:
         problems.append(f"permissão de escrita no schema {schema!r}")
     if problems:
         raise RuntimeError("Permissões do PostgreSQL não são somente leitura: " + "; ".join(problems))
-
-
-class _existing:
-    """Context manager that leaves a caller-owned connection open."""
-
-    def __init__(self, connection):
-        self.connection = connection
-
-    def __enter__(self):
-        return self.connection
-
-    def __exit__(self, *_):
-        return False
