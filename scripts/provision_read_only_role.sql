@@ -21,6 +21,7 @@ ALTER ROLE genomia_reader
 
 -- Para outro schema, altere target_schema acima e use o mesmo valor em DB_SCHEMA.
 GRANT CONNECT ON DATABASE :"target_database" TO genomia_reader;
+REVOKE CREATE ON DATABASE :"target_database" FROM genomia_reader;
 GRANT USAGE ON SCHEMA :"target_schema" TO genomia_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA :"target_schema" TO genomia_reader;
 
