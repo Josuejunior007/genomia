@@ -31,6 +31,7 @@ def test_validator_succeeds_for_read_only_role():
         "schema_usage": True,
         "schema_create": False,
         "database_create": False,
+        "has_unreadable_tables": False,
         "has_write_access": False,
     })
     validate_read_only(engine, "public")
@@ -41,6 +42,7 @@ def test_validator_succeeds_for_read_only_role():
     "overrides",
     [
         {"has_write_access": True},
+        {"has_unreadable_tables": True},
         {"schema_create": True},
         {"database_create": True},
         {"elevated_role": True},
@@ -55,6 +57,7 @@ def test_validator_rejects_unsafe_permissions(overrides):
         "schema_usage": True,
         "schema_create": False,
         "database_create": False,
+        "has_unreadable_tables": False,
         "has_write_access": False,
         **overrides,
     }
