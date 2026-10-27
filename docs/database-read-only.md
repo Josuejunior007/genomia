@@ -13,13 +13,14 @@ PostgreSQL usada em `DATABASE_URL`.
    o mesmo nome em `DB_SCHEMA`.
 3. No Supabase, se a política do projeto não permitir criar roles com `psql`,
    crie a role de login pelo painel **Database > Roles**. Depois conecte-se com
-   uma role administrativa e execute o restante do script; a senha deve ser
-   definida pelo painel, nunca adicionada ao SQL ou ao Git.
+   uma role administrativa e execute o restante do script; nesse caso, comente
+   a linha `\\password genomia_reader` no script se a senha já foi definida
+   no painel.
 4. Execute o comando de `ALTER DEFAULT PRIVILEGES` como cada role que cria
    tabelas no schema. Privilégios padrão são específicos do owner que os define.
 5. Garanta que `genomia_reader` não seja membro de outras roles. O script usa
-   `NOINHERIT`; a validação também detecta privilégios efetivos recebidos por
-   membership, permissões públicas ou grants preexistentes.
+   `NOINHERIT`; a validação rejeita qualquer membership, atributo administrativo,
+   permissões públicas de escrita ou grants preexistentes.
 6. Use a conexão da role de runtime na configuração da API e rode a validação:
 
    ```bash
@@ -40,10 +41,12 @@ a URL da role administrativa. Proteja e faça rotação da senha pelo secret man
 ## O que a validação confirma
 
 O comando verifica se a conexão é PostgreSQL, testa a consulta a
-`information_schema`, confirma `USAGE` e ausência de `CREATE` no schema, e
-rejeita roles administrativas ou privilégios efetivos de INSERT/UPDATE/DELETE/
-TRUNCATE (inclusive grants por coluna) nas tabelas do schema. Ele retorna código
-de saída diferente de zero quando falha.
+`information_schema`, confirma `USAGE` e ausência de `CREATE` no schema e no
+banco, e rejeita roles administrativas, memberships e privilégios efetivos de
+INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER (inclusive grants por coluna)
+nas tabelas do schema. O backend executa a mesma validação no startup e não
+inicia se a checagem falhar. O comando retorna código de saída diferente de zero
+quando falha.
 
 O SQL concede SELECT nas tabelas existentes e registra privilégios padrão para
 tabelas futuras criadas pelos owners configurados. Objetos criados por outros
