@@ -34,13 +34,14 @@ REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM genomai_readonly;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
     GRANT SELECT ON TABLES TO genomai_readonly;
 
--- Verificação rápida: estas consultas devem retornar false para as permissões
--- de escrita e true para SELECT em tabelas às quais o usuário tem acesso.
+-- Verificação das permissões no schema e nas tabelas existentes.
+-- Todas as colunas *_any_write devem ser false.
 SELECT
     has_schema_privilege('genomai_readonly', 'public', 'USAGE') AS can_use_schema,
     has_schema_privilege('genomai_readonly', 'public', 'CREATE') AS can_create_in_schema,
-    has_table_privilege('genomai_readonly', 'public.alguma_tabela', 'SELECT') AS can_select_example,
-    has_table_privilege('genomai_readonly', 'public.alguma_tabela', 'INSERT') AS can_insert_example,
-    has_table_privilege('genomai_readonly', 'public.alguma_tabela', 'UPDATE') AS can_update_example,
-    has_table_privilege('genomai_readonly', 'public.alguma_tabela', 'DELETE') AS can_delete_example;
--- Troque public.alguma_tabela por uma tabela real antes de executar a verificação.
+    COALESCE(bool_or(has_table_privilege('genomai_readonly', format('%I.%I', schemaname, tablename), 'SELECT')), false) AS can_select_any_table,
+    COALESCE(bool_or(has_table_privilege('genomai_readonly', format('%I.%I', schemaname, tablename), 'INSERT')), false) AS can_insert_any_table,
+    COALESCE(bool_or(has_table_privilege('genomai_readonly', format('%I.%I', schemaname, tablename), 'UPDATE')), false) AS can_update_any_table,
+    COALESCE(bool_or(has_table_privilege('genomai_readonly', format('%I.%I', schemaname, tablename), 'DELETE')), false) AS can_delete_any_table
+FROM pg_tables
+WHERE schemaname = 'public';
