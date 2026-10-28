@@ -1,26 +1,86 @@
-from fastapi import APIRouter, HTTPException
+
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
-from app.db.session import engine
+from app.db.session import engine, get_db
+from app.models.suggestion import Suggestion
 from app.services.schema_service import SchemaService
-from app.api.v1.endpoints.demo import suggestions
 
 router = APIRouter()
 
+
 @router.get("/metrics", summary="Indicadores de governança")
-def metrics():
+def metrics(db: Session = Depends(get_db)):
     try:
-        snapshot = SchemaService(engine, settings.db_schema).snapshot()
+        snapshot = SchemaService(
+            engine, settings.db_schema
+        ).snapshot()
+
+        total_suggestions = db.scalar(
+            select(func.count()).select_from(Suggestion)
+        ) or 0
+
+        pending = db.scalar(
+            select(func.count())
+            .select_from(Suggestion)
+            .where(Suggestion.status == "pending")
+        ) or 0
+
+        approved = db.scalar(
+            select(func.count())
+            .select_from(Suggestion)
+            .where(Suggestion.status == "approved")
+        ) or 0
+
+        rejected = db.scalar(
+            select(func.count())
+            .select_from(Suggestion)
+            .where(Suggestion.status == "rejected")
+        ) or 0
+
+        reviewed = approved + rejected
+
+        review_rate = round(
+            reviewed / total_suggestions * 100, 1
+        ) if total_suggestions else 0
+
     except SQLAlchemyError:
-        raise HTTPException(status_code=503, detail="Métricas indisponíveis; verifique a conexão com o banco.")
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Métricas indisponíveis; verifique "
+                "a conexão com o banco."
+            ),
+        )
+
     total = len(snapshot.tables)
-    documented = sum(1 for t in snapshot.tables if t.name.startswith("app") and t.columns)
-    pending = sum(1 for s in suggestions if s["status"] == "pending")
+
+    tables_with_metadata = sum(
+        1 for table in snapshot.tables
+        if table.columns
+    )
+
     return {
         "tables_total": total,
-        "tables_with_basic_metadata": documented,
-        "metadata_coverage_percent": round(documented / total * 100, 1) if total else 0,
-        "tables_without_primary_key": sum(1 for t in snapshot.tables if not t.primary_key),
-        "pending_demo_suggestions": pending,
-        "note": "Cobertura considera metadados básicos, não documentação de negócio aprovada. Sugestões são demonstrativas."
+        "tables_with_basic_metadata": tables_with_metadata,
+        "metadata_coverage_percent": round(
+            tables_with_metadata / total * 100, 1
+        ) if total else 0,
+        "tables_without_primary_key": sum(
+            1 for table in snapshot.tables
+            if not table.primary_key
+        ),
+        "pending_suggestions": pending,
+        "total_suggestions": total_suggestions,
+        "approved_suggestions": approved,
+        "rejected_suggestions": rejected,
+        "reviewed_suggestions": reviewed,
+        "review_rate_percent": review_rate,
+        "note": (
+            "A cobertura representa tabelas com colunas identificadas, "
+            "não documentação de negócio aprovada."
+        ),
     }
