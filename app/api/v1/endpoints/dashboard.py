@@ -5,7 +5,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.session import engine, get_db
+from app.db.app_session import get_app_db
+from app.db.session import engine
 from app.models.suggestion import Suggestion
 from app.services.schema_service import SchemaService
 
@@ -13,7 +14,7 @@ router = APIRouter()
 
 
 @router.get("/metrics", summary="Indicadores de governança")
-def metrics(db: Session = Depends(get_db)):
+def metrics(db: Session = Depends(get_app_db)):
     try:
         snapshot = SchemaService(
             engine, settings.db_schema

@@ -1,11 +1,15 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.session import engine
 from app.db.permissions import validate_read_only
+from app.db.app_session import app_engine
+from app.db.base import Base
+from app import models  # noqa: F401 - registers application-owned models
 
 app = FastAPI(
     title=settings.app_name,
@@ -13,11 +17,19 @@ app = FastAPI(
     description="MVP demonstrativo do GenomAI: catálogo, análise determinística e revisão humana. Sugestões nunca são executadas automaticamente."
 )
 app.include_router(api_router, prefix="/api/v1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 
 @app.on_event("startup")
 def enforce_read_only_database_role() -> None:
     """Do not serve requests if the runtime database role can write."""
+    Base.metadata.create_all(bind=app_engine)
     validate_read_only(engine, settings.db_schema)
 
 

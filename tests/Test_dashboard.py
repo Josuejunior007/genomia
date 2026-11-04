@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.main import app
-from app.db.session import get_db
+from app.db.app_session import get_app_db
 
 
 client = TestClient(app)
@@ -24,7 +24,7 @@ def make_fake_db(total=0, pending=0, approved=0, rejected=0):
 
 
 def request_metrics(fake_db, fake_snapshot):
-    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_app_db] = lambda: fake_db
 
     try:
         with patch(
@@ -33,7 +33,7 @@ def request_metrics(fake_db, fake_snapshot):
             mock_service.return_value.snapshot.return_value = fake_snapshot
             return client.get("/api/v1/dashboard/metrics")
     finally:
-        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_app_db, None)
 
 
 def test_dashboard_metrics_returns_503_when_database_fails():

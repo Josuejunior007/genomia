@@ -57,6 +57,13 @@ class ReviewItem(BaseModel):
     status: str = "pending"
     rationale: str
 
+class SuggestionCreate(BaseModel):
+    table: str = Field(min_length=1, max_length=255)
+    kind: str = Field(min_length=1, max_length=40)
+    description: str = Field(min_length=1, max_length=5000)
+    confidence: float = Field(ge=0, le=1)
+    rationale: str = Field(min_length=1, max_length=5000)
+
 class ReviewResponse(BaseModel):
     id: int
     status: str

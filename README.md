@@ -70,8 +70,9 @@ As principais rotas são:
 | `GET /api/v1/catalog/tables` | Lista e pesquisa tabelas. |
 | `GET /api/v1/catalog/tables/{table_name}` | Mostra os detalhes de uma tabela. |
 | `GET /api/v1/dashboard/metrics` | Mostra indicadores básicos. |
-| `GET /api/v1/suggestions` | Lista sugestões usadas na demonstração. |
-| `POST /api/v1/suggestions/{suggestion_id}/review` | Aprova ou rejeita uma sugestão demonstrativa. |
+| `GET /api/v1/suggestions` | Lista sugestões persistidas (`status=pending`, `approved`, `rejected` ou `all`). |
+| `POST /api/v1/suggestions` | Registra uma sugestão para revisão humana. |
+| `POST /api/v1/suggestions/{suggestion_id}/review` | Aprova ou rejeita uma sugestão pendente. |
 
 ## Como executar
 
@@ -84,7 +85,7 @@ As principais rotas são:
    pip install -r requirements.txt
    ```
 
-3. Copiar `.env.example` para `.env` e colocar a URL de conexão do Supabase em `DATABASE_URL`.
+3. Copiar `.env.example` para `.env` e configurar `DATABASE_URL` com uma role PostgreSQL somente leitura. `APP_DATABASE_URL` aponta para o banco controlado pelo GenomAI, que guarda sugestões e decisões (por padrão, SQLite local; em produção, configure um PostgreSQL dedicado). Nunca reutilize a role administrativa ou a role somente leitura do banco analisado para `APP_DATABASE_URL`.
 4. Iniciar a API:
 
    ```bash
@@ -93,22 +94,22 @@ As principais rotas são:
 
 5. Abrir `http://127.0.0.1:8000/docs` no navegador e testar as rotas.
 
-## O que ainda falta desenvolver?
+## Limites atuais e próximos passos
 
 Essa versão é um MVP para validar a ideia e demonstrar a estrutura do backend. Ainda faltam algumas partes para chegar à proposta completa:
 
 - Integrar uma IA generativa, como Azure OpenAI, para ajudar a sugerir descrições e interpretar nomes de tabelas e campos.
-- Salvar as sugestões e as decisões de aprovação no banco, porque atualmente essa parte é apenas demonstrativa e fica na memória da aplicação.
-- Implementar autenticação e permissões, se isso fizer parte do escopo final.
+- Integrar autenticação e permissões antes de disponibilizar a API fora do ambiente de desenvolvimento.
+- Configurar `CORS_ORIGINS` com a origem real do frontend no ambiente de execução.
 - Melhorar as métricas do dashboard para mostrar a cobertura real da documentação e da governança.
 - Desenvolver ou conectar o frontend que vai apresentar o catálogo de forma mais visual.
 
-As sugestões do sistema não são aplicadas automaticamente ao banco. A ideia é que sejam analisadas e validadas antes de qualquer mudança.
+As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A IA ainda não está integrada (`AI_ENABLED=false`); ela poderá registrar propostas usando o mesmo contrato de sugestão, sujeitas à revisão humana.
 
 Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
 
 ## Resumindo
 
-O que eu fiz até aqui foi montar a base do backend do GenomAI: conectar ao Supabase PostgreSQL, ler a estrutura do banco, disponibilizar um catálogo simples, aplicar algumas regras iniciais e demonstrar como as recomendações poderiam passar por uma revisão humana.
+O backend do GenomAI conecta ao PostgreSQL analisado com uma role somente leitura, lê a estrutura, disponibiliza um catálogo e aplica regras iniciais. Sugestões e decisões são persistidas separadamente no armazenamento interno da aplicação.
 
-Escolhi começar por essa parte para manter o escopo controlado e ter algo que eu consiga executar e explicar na mentoria. Depois, a ideia é evoluir o projeto por etapas, principalmente com a integração de IA e a persistência das informações de governança.
+O próximo passo é conectar o frontend à API e integrar a IA para propor descrições e relações. A integração deve usar as rotas de sugestão e preservar a revisão humana antes de qualquer mudança no banco analisado.
