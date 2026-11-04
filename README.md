@@ -99,11 +99,19 @@ As principais rotas são:
 O frontend demonstrativo fica em `frontend/` e consome a API FastAPI. Com o backend
 rodando na porta `8000`, em outro terminal:
 
+Primeiro seleciona a pasta no front ende 
 ```bash
-cd frontend
+cd .\frontend
+```
+Agora você instala o npm
+```bash
 npm install
+```
+Agora você pode rodar a aplicação
+```bash
 npm run dev
 ```
+Se não funcionar automatico pelo readme pegue o codigo e va escrevendo no terminal
 
 Abra `http://localhost:5173`. A URL da API pode ser alterada com `VITE_API_URL`
 (veja `frontend/.env.example`). O `CORS_ORIGINS` padrão do backend já permite
