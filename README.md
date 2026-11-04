@@ -94,6 +94,24 @@ As principais rotas são:
 
 5. Abrir `http://127.0.0.1:8000/docs` no navegador e testar as rotas.
 
+### Interface web (React)
+
+O frontend demonstrativo fica em `frontend/` e consome a API FastAPI. Com o backend
+rodando na porta `8000`, em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Abra `http://localhost:5173`. A URL da API pode ser alterada com `VITE_API_URL`
+(veja `frontend/.env.example`). O `CORS_ORIGINS` padrão do backend já permite
+`http://localhost:5173`.
+
+O frontend apresenta métricas, exploração de tabelas e colunas, recomendações da
+análise estrutural e revisão humana das sugestões persistidas.
+
 ## Limites atuais e próximos passos
 
 Essa versão é um MVP para validar a ideia e demonstrar a estrutura do backend. Ainda faltam algumas partes para chegar à proposta completa:
@@ -102,7 +120,13 @@ Essa versão é um MVP para validar a ideia e demonstrar a estrutura do backend.
 - Integrar autenticação e permissões antes de disponibilizar a API fora do ambiente de desenvolvimento.
 - Configurar `CORS_ORIGINS` com a origem real do frontend no ambiente de execução.
 - Melhorar as métricas do dashboard para mostrar a cobertura real da documentação e da governança.
-- Desenvolver ou conectar o frontend que vai apresentar o catálogo de forma mais visual.
+- Evoluir a interface com autenticação e fluxos de produção.
+
+O projeto ainda não usa Power BI nem Microsoft Fabric. A documentação inicial os
+cita como tecnologias possíveis para etapas futuras de visualização; nesta versão,
+os indicadores são calculados pelo backend e mostrados diretamente pela interface
+React. Uma integração com Fabric/Power BI pode ser avaliada se houver necessidade
+de relatórios corporativos ou compartilhamento analítico fora do GenomAI.
 
 As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A IA ainda não está integrada (`AI_ENABLED=false`); ela poderá registrar propostas usando o mesmo contrato de sugestão, sujeitas à revisão humana.
 
@@ -112,4 +136,4 @@ Também é importante configurar o acesso ao Supabase com permissões mínimas d
 
 O backend do GenomAI conecta ao PostgreSQL analisado com uma role somente leitura, lê a estrutura, disponibiliza um catálogo e aplica regras iniciais. Sugestões e decisões são persistidas separadamente no armazenamento interno da aplicação.
 
-O próximo passo é conectar o frontend à API e integrar a IA para propor descrições e relações. A integração deve usar as rotas de sugestão e preservar a revisão humana antes de qualquer mudança no banco analisado.
+O frontend React já está conectado à API para apresentar o catálogo, a análise e a revisão humana. Próximos passos possíveis incluem autenticação, integração de IA para propor descrições e relações e, caso necessário, relatórios em Fabric/Power BI. A integração de IA deve usar as rotas de sugestão e preservar a revisão humana antes de qualquer mudança no banco analisado.
