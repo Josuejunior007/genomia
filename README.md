@@ -113,6 +113,8 @@ npm run dev
 ```
 Se não funcionar automatico pelo readme pegue o codigo e va escrevendo no terminal
 
+Agora para encerrar a atividade, você primeiro encerra no o front, seleciona o terminal e digita "q" e da enter e depois você vai no terminal do back faz Control+c 
+
 Abra `http://localhost:5173`. A URL da API pode ser alterada com `VITE_API_URL`
 (veja `frontend/.env.example`). O `CORS_ORIGINS` padrão do backend já permite
 `http://localhost:5173`.
