@@ -68,7 +68,12 @@ class GeminiAdvisorService:
                 "mime_type": "application/json",
                 "schema": GeminiAnalysis.model_json_schema(),
             },
+            generation_config={"thinking_level": "low", "max_output_tokens": 4096},
+            timeout=120,
         )
         if not interaction.output_text:
-            raise ValueError("O Gemini não retornou uma análise estruturada.")
+            raise ValueError(
+                "O Gemini encerrou a interação sem texto estruturado "
+                f"(status={interaction.status or 'desconhecido'})."
+            )
         return GeminiAnalysis.model_validate_json(interaction.output_text)
