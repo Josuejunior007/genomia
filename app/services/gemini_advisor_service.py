@@ -3,7 +3,6 @@
 import json
 
 from google import genai
-from google.genai import types
 from pydantic import BaseModel, Field
 
 from app.schemas.schema import AnalysisReport, SchemaSnapshot
@@ -61,15 +60,15 @@ class GeminiAdvisorService:
             + "\n\nAchados determinísticos já apresentados ao usuário (não duplique; pode aprofundar com evidências adicionais):\n"
             + json.dumps(deterministic.model_dump(mode="json"), ensure_ascii=False, separators=(",", ":"))
         )
-        result = self.client.models.generate_content(
+        interaction = self.client.interactions.create(
             model=self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=GeminiAnalysis,
-                temperature=0.2,
-            ),
+            input=prompt,
+            response_format={
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": GeminiAnalysis.model_json_schema(),
+            },
         )
-        if not result.text:
+        if not interaction.output_text:
             raise ValueError("O Gemini não retornou uma análise estruturada.")
-        return GeminiAnalysis.model_validate_json(result.text)
+        return GeminiAnalysis.model_validate_json(interaction.output_text)

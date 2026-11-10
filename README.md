@@ -149,10 +149,10 @@ Para ativar a integração, instale as dependências atualizadas e configure no 
 ```dotenv
 AI_ENABLED=true
 GEMINI_API_KEY=sua_chave_do_google_ai_studio
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
-Mantenha a chave fora do Git. Disponibilidade e limites gratuitos dependem das condições atuais da conta e do modelo no Google AI Studio. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
+Mantenha a chave fora do Git. Para atualizar uma instalação existente, altere também `GEMINI_MODEL` no seu `.env` local para `gemini-3.8-flash` e reinstale as dependências com `pip install -r requirements.txt`. O código usa a Interactions API e saída JSON estruturada, conforme a API recomendada para esse modelo. Disponibilidade e limites gratuitos dependem das condições atuais da conta no Google AI Studio. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
 
 Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
 
