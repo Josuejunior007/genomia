@@ -138,7 +138,21 @@ os indicadores são calculados pelo backend e mostrados diretamente pela interfa
 React. Uma integração com Fabric/Power BI pode ser avaliada se houver necessidade
 de relatórios corporativos ou compartilhamento analítico fora do GenomAI.
 
-As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A IA ainda não está integrada (`AI_ENABLED=false`); ela poderá registrar propostas usando o mesmo contrato de sugestão, sujeitas à revisão humana.
+As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A integração com Gemini é opcional e permanece desativada até `AI_ENABLED=true` e `GEMINI_API_KEY` estarem configurados.
+
+### Análise com Gemini
+
+O botão **Analisar com Gemini** e a rota `POST /api/v1/advisor/ai-analyze` enviam ao Gemini apenas metadados do esquema (tabelas, colunas, tipos, chaves e índices). Valores padrão de colunas e registros do banco não são enviados. O modelo pode explicar problemas e propor documentação, índices ou relações com evidências, riscos e incertezas. As propostas são persistidas como pendentes e aparecem em **Revisão de sugestões**.
+
+Para ativar a integração, instale as dependências atualizadas e configure no `.env` local:
+
+```dotenv
+AI_ENABLED=true
+GEMINI_API_KEY=sua_chave_do_google_ai_studio
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Mantenha a chave fora do Git. Disponibilidade e limites gratuitos dependem das condições atuais da conta e do modelo no Google AI Studio. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
 
 Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
 

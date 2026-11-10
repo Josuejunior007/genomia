@@ -16,6 +16,7 @@ export type Metrics = {
 }
 export type Recommendation = { severity: 'low' | 'medium' | 'high'; table: string; category: string; message: string; suggested_sql?: string | null; evidence?: string | null }
 export type Suggestion = { id: number; table: string; kind: string; description: string; confidence: number; status: string; rationale: string }
+export type AiAnalysisResult = { summary: string; suggestions_created: number; suggestions: Suggestion[]; human_review_required: boolean; database_changes_applied: boolean }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
@@ -36,6 +37,7 @@ export const api = {
   tables: (q = '') => request<{ count: number; items: TableSummary[] }>(`/api/v1/catalog/tables${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   table: (name: string) => request<TableInfo>(`/api/v1/catalog/tables/${encodeURIComponent(name)}`),
   analyze: () => request<{ summary: string; tables_analyzed: number; recommendations: Recommendation[] }>('/api/v1/advisor/analyze'),
+  aiAnalyze: () => request<AiAnalysisResult>('/api/v1/advisor/ai-analyze', { method: 'POST' }),
   suggestions: (status: string) => request<Suggestion[]>(`/api/v1/suggestions?status=${status}`),
   review: (id: number, decision: 'approved' | 'rejected') => request(`/api/v1/suggestions/${id}/review`, {
     method: 'POST', body: JSON.stringify({ decision, comment: '' }),
