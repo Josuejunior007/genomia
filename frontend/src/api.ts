@@ -16,7 +16,7 @@ export type Metrics = {
 }
 export type Recommendation = { severity: 'low' | 'medium' | 'high'; table: string; category: string; message: string; suggested_sql?: string | null; evidence?: string | null }
 export type Suggestion = { id: number; table: string; kind: string; description: string; confidence: number; status: string; rationale: string }
-export type AiAnalysisResult = { summary: string; suggestions_created: number; suggestions: Suggestion[]; human_review_required: boolean; database_changes_applied: boolean }
+export type AiAnalysisResult = { summary: string; suggestions_created: number; duplicates_skipped: number; suggestions: Suggestion[]; human_review_required: boolean; database_changes_applied: boolean }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {

@@ -144,6 +144,8 @@ As sugestões e decisões de revisão ficam persistidas no banco interno do Geno
 
 O botão **Analisar com Gemini** e a rota `POST /api/v1/advisor/ai-analyze` enviam ao Gemini apenas metadados do esquema (tabelas, colunas, tipos, chaves e índices). Valores padrão de colunas e registros do banco não são enviados. O modelo pode explicar problemas e propor documentação, índices ou relações com evidências, riscos e incertezas. As propostas são persistidas como pendentes e aparecem em **Revisão de sugestões**.
 
+As propostas e decisões ficam no banco interno configurado em `APP_DATABASE_URL`. No SQLite padrão, o arquivo fica na pasta do projeto para continuar disponível após fechar e reabrir o backend. Em novas análises, propostas parecidas da mesma tabela são comparadas com as já salvas — pendentes, aprovadas ou rejeitadas — e não entram de novo na fila. Uma falha ou timeout do Gemini é mostrada na tela; nenhuma proposta parcial é registrada.
+
 Para ativar a integração, instale as dependências atualizadas e configure no `.env` local:
 
 ```dotenv
