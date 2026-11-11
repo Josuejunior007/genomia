@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from sqlalchemy import text
@@ -69,7 +69,13 @@ def health():
         }
 
     except SQLAlchemyError:
-        raise HTTPException(
+        return JSONResponse(
             status_code=503,
-            detail="API ativa, mas o banco de dados está indisponível.",
+            content={
+                "detail": (
+                    "API ativa, mas o banco de dados está indisponível. "
+                    "Tente novamente mais tarde."
+                ),
+                "code": "database_unavailable",
+            },
         )
