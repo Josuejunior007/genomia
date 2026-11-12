@@ -138,23 +138,23 @@ os indicadores são calculados pelo backend e mostrados diretamente pela interfa
 React. Uma integração com Fabric/Power BI pode ser avaliada se houver necessidade
 de relatórios corporativos ou compartilhamento analítico fora do GenomAI.
 
-As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A integração com Gemini é opcional e permanece desativada até `AI_ENABLED=true` e `GEMINI_API_KEY` estarem configurados.
+As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A integração com Groq é opcional e permanece desativada até `AI_ENABLED=true` e `GROQ_API_KEY` estarem configurados.
 
-### Análise com Gemini
+### Análise com Groq
 
-O botão **Analisar com Gemini** e a rota `POST /api/v1/advisor/ai-analyze` enviam ao Gemini apenas metadados do esquema (tabelas, colunas, tipos, chaves e índices). Valores padrão de colunas e registros do banco não são enviados. O modelo pode explicar problemas e propor documentação, índices ou relações com evidências, riscos e incertezas. As propostas são persistidas como pendentes e aparecem em **Revisão de sugestões**.
+O botão **Analisar com Groq** e a rota `POST /api/v1/advisor/ai-analyze` enviam ao Groq apenas metadados do esquema (tabelas, colunas, tipos, chaves e índices). Valores padrão de colunas e registros do banco não são enviados. O modelo pode explicar problemas e propor documentação, índices ou relações com evidências, riscos e incertezas. As propostas são persistidas como pendentes e aparecem em **Revisão de sugestões**.
 
-As propostas e decisões ficam no banco interno configurado em `APP_DATABASE_URL`. No SQLite padrão, o arquivo fica na pasta do projeto para continuar disponível após fechar e reabrir o backend. Em novas análises, propostas parecidas da mesma tabela são comparadas com as já salvas — pendentes, aprovadas ou rejeitadas — e não entram de novo na fila. Uma falha ou timeout do Gemini é mostrada na tela; nenhuma proposta parcial é registrada.
+As propostas e decisões ficam no banco interno configurado em `APP_DATABASE_URL`. No SQLite padrão, o arquivo fica na pasta do projeto para continuar disponível após fechar e reabrir o backend. Em novas análises, propostas parecidas da mesma tabela são comparadas com as já salvas — pendentes, aprovadas ou rejeitadas — e não entram de novo na fila. Uma falha ou timeout do Groq é mostrada na tela; nenhuma proposta parcial é registrada.
 
 Para ativar a integração, instale as dependências atualizadas e configure no `.env` local:
 
 ```dotenv
 AI_ENABLED=true
-GEMINI_API_KEY=sua_chave_do_google_ai_studio
-GEMINI_MODEL=gemini-3.8-flash
+GROQ_API_KEY=sua_chave_do_groq_cloud
+GROQ_MODEL=llama-3.1-8b-instant
 ```
 
-Mantenha a chave fora do Git. Para atualizar uma instalação existente, altere também `GEMINI_MODEL` no seu `.env` local para `gemini-3.8-flash` e reinstale as dependências com `pip install -r requirements.txt`. O código usa a Interactions API e saída JSON estruturada, conforme a API recomendada para esse modelo. Disponibilidade e limites gratuitos dependem das condições atuais da conta no Google AI Studio. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
+Mantenha a chave fora do Git. Para atualizar uma instalação existente, altere também `GROQ_MODEL` no seu `.env` local para `llama-3.1-8b-instant` e reinstale as dependências com `pip install -r requirements.txt`. O código usa a Chat Completions API e saída JSON estruturada, conforme a API recomendada para esse modelo. Disponibilidade e limites gratuitos dependem das condições atuais da conta no Google AI Studio. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
 
 Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
 
