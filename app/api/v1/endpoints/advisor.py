@@ -13,7 +13,7 @@ from app.db.session import engine
 from app.models.suggestion import Suggestion
 from app.schemas.schema import AnalysisReport
 from app.services.advisor_service import AdvisorService
-from app.services.gemini_advisor_service import GeminiAdvisorService, GeminiSuggestion
+from app.services.groq_advisor_service import GroqAdvisorService, GroqSuggestion
 from app.services.schema_service import SchemaService
 
 router = APIRouter()
@@ -26,7 +26,7 @@ def _normalized_text(value: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", value))
 
 
-def _is_duplicate(proposal: GeminiSuggestion, saved: list[tuple[str, str, str]]) -> bool:
+def _is_duplicate(proposal: GroqSuggestion, saved: list[tuple[str, str, str]]) -> bool:
     """Compare with persisted proposals so reruns do not refill the review queue."""
     table = _normalized_text(proposal.table)
     kind = _normalized_text(proposal.kind)
@@ -52,12 +52,12 @@ def analyze_schema() -> AnalysisReport:
         raise HTTPException(status_code=503, detail="Análise indisponível: não foi possível consultar os metadados do banco.")
 
 
-@router.post("/ai-analyze", summary="Analisar esquema com Gemini e salvar propostas para revisão")
+@router.post("/ai-analyze", summary="Analisar esquema com Groq e salvar propostas para revisão")
 def analyze_schema_with_ai(db: Session = Depends(get_app_db)):
     if not settings.ai_enabled:
         raise HTTPException(status_code=503, detail="Análise com IA desativada. Configure AI_ENABLED=true.")
-    if not settings.gemini_api_key:
-        raise HTTPException(status_code=503, detail="Configure GEMINI_API_KEY no ambiente da API.")
+    if not settings.groq_api_key:
+        raise HTTPException(status_code=503, detail="Configure GROQ_API_KEY no ambiente da API.")
     try:
         snapshot = SchemaService(engine, settings.db_schema).snapshot()
     except SQLAlchemyError:
@@ -65,22 +65,22 @@ def analyze_schema_with_ai(db: Session = Depends(get_app_db)):
 
     try:
         deterministic = AdvisorService().analyze(snapshot)
-        analysis = GeminiAdvisorService(settings.gemini_api_key, settings.gemini_model).analyze(snapshot, deterministic)
+        analysis = GroqAdvisorService(settings.groq_api_key, settings.groq_model).analyze(snapshot, deterministic)
     except Exception as exc:
-        logger.exception("Falha ao consultar o Gemini")
+        logger.exception("Falha ao consultar o Groq")
         error_text = str(exc).casefold()
         provider_status = getattr(exc, "status_code", None)
         if "timeout" in error_text or "timed out" in error_text:
             raise HTTPException(
                 status_code=504,
-                detail="O Gemini demorou demais para responder. Nenhuma sugestão nova foi salva nesta tentativa; tente novamente mais tarde.",
+                detail="O Groq demorou demais para responder. Nenhuma sugestão nova foi salva nesta tentativa; tente novamente mais tarde.",
             ) from exc
         if provider_status in (429, 503, 504):
             raise HTTPException(
                 status_code=503,
-                detail="O Gemini está temporariamente indisponível ou limitou as chamadas. Nenhuma sugestão nova foi salva nesta tentativa; tente novamente mais tarde.",
+                detail="O Groq está temporariamente indisponível ou limitou as chamadas. Nenhuma sugestão nova foi salva nesta tentativa; tente novamente mais tarde.",
             ) from exc
-        raise HTTPException(status_code=502, detail="O serviço Gemini não conseguiu concluir a análise. Verifique a chave, o modelo e os limites da API.") from exc
+        raise HTTPException(status_code=502, detail="O serviço Groq não conseguiu concluir a análise. Verifique a chave, o modelo e os limites da API.") from exc
 
     tables = {table.name for table in snapshot.tables}
     saved = [
