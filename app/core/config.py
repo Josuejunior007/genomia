@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     db_schema: str = "public"
     db_read_only: bool = True
     ai_enabled: bool = False
-    gemini_api_key: str | None = None
-    gemini_model: str = "gemini-3.8-flash"
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.1-8b-instant"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
