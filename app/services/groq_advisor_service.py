@@ -65,15 +65,59 @@ class GroqAdvisorService:
             "(não duplique; pode aprofundar com evidências adicionais):\n"
             + json.dumps(deterministic.model_dump(mode="json"), ensure_ascii=False, separators=(",", ":"))
         )
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "suggestions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "table": {"type": "string"},
+                            "kind": {"type": "string"},
+                            "description": {"type": "string"},
+                            "confidence": {"type": "number"},
+                            "evidence": {"type": "string"},
+                            "risks_and_uncertainty": {"type": "string"},
+                            "suggested_sql": {"type": "string"},
+                        },
+                        "required": [
+                            "table", "kind", "description", "confidence", "evidence",
+                            "risks_and_uncertainty", "suggested_sql",
+                        ],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["summary", "suggestions"],
+            "additionalProperties": False,
+        }
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_RULES},
-                {"role": "user", "content": prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        prompt
+                        + "\n\nRetorne exclusivamente um objeto JSON com as chaves "
+                        + "summary e suggestions. Cada item de suggestions deve conter "
+                        + "table, kind, description, confidence, evidence, "
+                        + "risks_and_uncertainty e suggested_sql."
+                    ),
+                },
             ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=4096,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "genomai_analysis",
+                    "strict": True,
+                    "schema": response_schema,
+                },
+            },
+            reasoning_effort="low",
+            max_completion_tokens=4096,
         )
         output_text = response.choices[0].message.content
         if not output_text:
