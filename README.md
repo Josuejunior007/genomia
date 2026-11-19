@@ -69,6 +69,8 @@ As principais rotas são:
 | `GET /api/v1/advisor/analyze` | Executa as regras de análise. |
 | `GET /api/v1/catalog/tables` | Lista e pesquisa tabelas. |
 | `GET /api/v1/catalog/tables/{table_name}` | Mostra os detalhes de uma tabela. |
+| `GET /api/v1/catalog/tables/{table_name}/rows` | Pagina os registros da tabela (`limit` de 1 a 200 e `offset`). |
+| `GET /api/v1/catalog/tables/{table_name}/relationships` | Lista os relacionamentos de entrada e de saída da tabela. |
 | `GET /api/v1/dashboard/metrics` | Mostra indicadores básicos. |
 | `GET /api/v1/suggestions` | Lista sugestões persistidas (`status=pending`, `approved`, `rejected` ou `all`). |
 | `POST /api/v1/suggestions` | Registra uma sugestão para revisão humana. |

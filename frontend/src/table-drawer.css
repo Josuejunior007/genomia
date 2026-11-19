@@ -1,0 +1,85 @@
+/* Table detail drawer: data grid, tabs and relationship cards. */
+.table-drawer.detail-drawer{width:min(840px,100%)}
+.drawer-tabs{display:flex;gap:3px;border-bottom:1px solid #edf0f3;margin:4px 0 0;overflow-x:auto}
+.drawer-tabs button{height:38px;border:0;border-bottom:2px solid transparent;background:transparent;color:#8a95a1;font-size:9px;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap}
+.drawer-tabs button:hover{color:#5d6fae}
+.drawer-tabs button.selected{border-color:#526fd0;color:#4865c4}
+.drawer-tabs button svg{opacity:.85}
+
+.drawer-loading{display:flex;align-items:center;justify-content:center;gap:8px;min-height:180px;color:#8b96a2;font-size:9px}
+.drawer-error{display:flex;gap:9px;align-items:flex-start;background:#fff4f2;border:1px solid #f4dedb;border-radius:7px;padding:12px;margin-top:15px;color:#ad5c53}
+.drawer-error>div{flex:1}
+.drawer-error strong{display:block;font-size:9px}
+.drawer-error p{font-size:8px;margin:3px 0 0;color:#a9766f;line-height:1.45}
+.drawer-error button{display:flex;align-items:center;gap:4px;border:1px solid #eccdc9;background:#fff;color:#a75c54;border-radius:4px;font-size:8px;height:26px;padding:0 7px;white-space:nowrap}
+.drawer-hint{margin:10px 0 0;font-size:8px;color:#8b96a2}
+.drawer-hint code{font:8px Consolas,monospace;background:#f2f4f7;border-radius:3px;padding:3px 5px;color:#5d6b79}
+.drawer-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:190px;color:#a0a9b2;padding:18px}
+.drawer-empty-state svg{color:#b7c2cf;margin-bottom:8px}
+.drawer-empty-state strong{font:700 10px Manrope,sans-serif;color:#536171}
+.drawer-empty-state p{margin:5px 0 0;font-size:8px;color:#95a0aa;max-width:330px;line-height:1.5}
+.drawer-empty-state b{color:#697788;font-weight:600}
+
+.data-table-toolbar{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px}
+.data-table-toolbar p{display:flex;align-items:center;gap:5px;margin:0;font-size:8px;color:#8c97a2}
+.data-schema{font:8px Consolas,monospace;background:#f1f3f6;color:#6d7987;border-radius:3px;padding:3px 5px}
+.data-table-toolbar .icon-button[disabled]{opacity:.5}
+.data-table-wrap{margin-top:2px;border:1px solid #e9edf1;border-radius:7px;overflow:auto;max-height:calc(100vh - 320px);background:#fff;transition:opacity .15s}
+.data-table-wrap.is-loading{opacity:.55}
+.data-table{border-collapse:separate;border-spacing:0;width:100%}
+.data-table th{position:sticky;top:0;z-index:1;background:#fafbfc;text-align:left;padding:8px 10px;border-bottom:1px solid #e9edf1;white-space:nowrap;vertical-align:top}
+.data-column-name{display:flex;align-items:center;gap:4px;font-size:8px;font-weight:700;color:#56657a}
+.data-table th small{display:block;margin-top:3px;font:7px Consolas,monospace;font-weight:400;color:#9aa4ae;text-transform:lowercase}
+.data-table td{padding:8px 10px;border-bottom:1px solid #f2f4f6;color:#4f5d6b;font:9px Consolas,monospace;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.data-table tbody tr:hover td{background:#fafbfe}
+.data-table tbody tr:last-child td{border-bottom:0}
+.data-table .data-index{position:sticky;left:0;z-index:1;width:38px;min-width:38px;text-align:right;background:#fcfdfe;color:#a5aeb8;font:8px Consolas,monospace}
+.data-table th.data-index{z-index:2;background:#f5f7f9}
+.cell-null{color:#b3bbc3;font-style:italic}
+.cell-bool.true{color:#268d70}
+.cell-bool.false{color:#c07a4a}
+.cell-json{color:#7a6bbf}
+.data-empty{text-align:center !important;white-space:normal !important;padding:38px 10px !important;color:#95a0aa !important;font-family:'DM Sans',sans-serif !important}
+.data-empty svg{display:block;margin:0 auto 7px;color:#b6c1ce}
+.data-empty strong{display:block;font:700 10px Manrope,sans-serif;color:#536171}
+.data-empty span{display:block;margin-top:4px;font-size:8px}
+.data-pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 0;color:#8d98a3;font-size:8px}
+.data-pagination strong{color:#5c6976}
+.data-pagination>div{display:flex;align-items:center;gap:5px}
+.data-pagination button{height:25px;width:25px;display:grid;place-items:center;border:1px solid #e9edf1;background:#fff;color:#7d8996;border-radius:4px}
+.data-pagination button:disabled{opacity:.45;cursor:not-allowed}
+.data-pagination .page-current{min-width:25px;height:25px;display:grid;place-items:center;background:#eef2fc;color:#4e68bd;border-radius:4px;font-weight:700;font-size:8px}
+
+.relation-link{border:0;background:transparent;padding:3px 5px;border-radius:4px;cursor:pointer}
+.relation-link:hover{background:#eef2fc;color:#4269d5}
+.relationship-group{margin-top:18px}
+.relationship-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;margin-bottom:8px}
+.relationship-group-head h3{font:700 10px Manrope,sans-serif;color:#354455;margin:0}
+.relationship-group-head p{font-size:8px;color:#929ca6;margin:4px 0 0;line-height:1.45}
+.relationship-total{min-width:20px;height:20px;border-radius:5px;background:#eef2fc;color:#506bc4;display:grid;place-items:center;font-size:8px;font-weight:700}
+.relationship-list{display:flex;flex-direction:column;gap:7px}
+.relationship-card{display:flex;gap:9px;padding:10px;border:1px solid #edf0f3;background:#fafbfd;border-radius:6px}
+.relationship-icon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;flex:none}
+.relationship-icon.outbound{background:#eef2fc;color:#5f7bd0}
+.relationship-icon.inbound{background:#eaf7f2;color:#2a9a78}
+.relationship-copy{flex:1;min-width:0}
+.relationship-meta{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.relationship-direction{font-size:7px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-radius:3px;padding:3px 5px}
+.relationship-direction.outbound{background:#eef2fc;color:#5b76c9}
+.relationship-direction.inbound{background:#eaf7f2;color:#2c9475}
+.relationship-constraint{font:7px Consolas,monospace;color:#9aa4ae;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.relationship-line{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:0;font-size:8px;color:#8a95a0;line-height:1.6}
+.relationship-line svg{color:#9fa9b4;flex:none}
+.relationship-columns{font:8px Consolas,monospace;color:#5c6a78;background:#eef1f6;border-radius:3px;padding:2px 4px}
+.relationship-table{border:0;background:transparent;padding:0;color:#4665c0;font-size:8px;font-weight:700;display:inline-flex;align-items:center;gap:3px;border-radius:3px}
+.relationship-table:hover{text-decoration:underline}
+.relationship-caption{margin:4px 0 0;font-size:7px;color:#a0a9b2}
+
+@media(max-width:700px){
+  .table-drawer.detail-drawer{width:100%}
+  .drawer-tabs button{padding:0 7px;font-size:8px}
+  .data-table-wrap{max-height:calc(100vh - 300px)}
+  .data-table td{max-width:170px}
+  .data-pagination{font-size:7px}
+  .relationship-card{padding:8px}
+}

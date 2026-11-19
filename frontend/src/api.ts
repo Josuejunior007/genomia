@@ -9,6 +9,17 @@ export type TableInfo = {
   foreign_keys: { constrained_columns: string[]; referred_table: string; referred_schema: string; referred_columns: string[] }[]
   indexes: { name: string; column_names: string[]; unique: boolean }[]
 }
+export type TableRows = {
+  table: string; schema: string; columns: ColumnInfo[]; rows: Record<string, unknown>[]
+  total: number; limit: number; offset: number
+}
+export type TableRelationship = {
+  constraint_name: string; source_table: string; source_schema: string; source_columns: string[]
+  target_table: string; target_schema: string; target_columns: string[]
+}
+export type TableRelationships = {
+  table: string; schema: string; outbound: TableRelationship[]; inbound: TableRelationship[]
+}
 export type Metrics = {
   tables_total: number; tables_with_basic_metadata: number; metadata_coverage_percent: number
   tables_without_primary_key: number; pending_suggestions: number; total_suggestions: number
@@ -36,6 +47,8 @@ export const api = {
   metrics: () => request<Metrics>('/api/v1/dashboard/metrics'),
   tables: (q = '') => request<{ count: number; items: TableSummary[] }>(`/api/v1/catalog/tables${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   table: (name: string) => request<TableInfo>(`/api/v1/catalog/tables/${encodeURIComponent(name)}`),
+  rows: (name: string, limit = 25, offset = 0) => request<TableRows>(`/api/v1/catalog/tables/${encodeURIComponent(name)}/rows?limit=${limit}&offset=${offset}`),
+  relationships: (name: string) => request<TableRelationships>(`/api/v1/catalog/tables/${encodeURIComponent(name)}/relationships`),
   analyze: () => request<{ summary: string; tables_analyzed: number; recommendations: Recommendation[] }>('/api/v1/advisor/analyze'),
   aiAnalyze: () => request<AiAnalysisResult>('/api/v1/advisor/ai-analyze', { method: 'POST' }),
   suggestions: (status: string) => request<Suggestion[]>(`/api/v1/suggestions?status=${status}`),

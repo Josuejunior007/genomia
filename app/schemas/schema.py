@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 class ColumnInfo(BaseModel):
@@ -30,6 +32,30 @@ class SchemaSnapshot(BaseModel):
     database: str
     schema: str
     tables: list[TableInfo]
+
+class TableRows(BaseModel):
+    table: str
+    schema: str
+    columns: list[ColumnInfo]
+    rows: list[dict[str, Any]]
+    total: int
+    limit: int
+    offset: int
+
+class RelationshipInfo(BaseModel):
+    constraint_name: str = ""
+    source_table: str
+    source_schema: str
+    source_columns: list[str]
+    target_table: str
+    target_schema: str
+    target_columns: list[str]
+
+class TableRelationships(BaseModel):
+    table: str
+    schema: str
+    outbound: list[RelationshipInfo]
+    inbound: list[RelationshipInfo]
 
 class Recommendation(BaseModel):
     severity: str = Field(pattern="^(low|medium|high)$")
