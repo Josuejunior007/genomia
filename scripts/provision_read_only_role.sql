@@ -13,9 +13,12 @@ BEGIN
 END
 $$;
 
+-- A role nasce com os defaults seguros (NOSUPERUSER, NOCREATEDB,
+-- NOCREATEROLE, NOREPLICATION, NOBYPASSRLS). Não altere esses atributos:
+-- o SQL Editor do Supabase pode não ser SUPERUSER, e apenas um superuser
+-- pode mudar o atributo SUPERUSER.
 ALTER ROLE genomia_reader
-    LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
-    NOREPLICATION NOBYPASSRLS;
+    LOGIN NOINHERIT;
 
 \password genomia_reader
 

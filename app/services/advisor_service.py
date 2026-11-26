@@ -1,8 +1,14 @@
+"""Regras determinísticas de qualidade estrutural.
+
+As recomendações são apenas texto/JSON. Nenhuma regra executa SQL ou lê
+registros; o SQL sugerido é informativo e usa quoting de identificadores.
+"""
+
 from app.schemas.schema import AnalysisReport, Recommendation, SchemaSnapshot
 
 
 def quote_ident(value: str) -> str:
-    """Quote PostgreSQL identifiers safely for suggested SQL text."""
+    """Cita um identificador PostgreSQL para texto de SQL sugerido."""
     return '"' + value.replace('"', '""') + '"'
 
 
@@ -10,6 +16,7 @@ class AdvisorService:
     """Regras determinísticas. Recomendações são texto e nunca são executadas."""
 
     def analyze(self, snapshot: SchemaSnapshot) -> AnalysisReport:
+        """Analisa PKs, índices de FK, referências e heurísticas de nome."""
         recs: list[Recommendation] = []
         table_names = {(table.schema, table.name) for table in snapshot.tables}
 

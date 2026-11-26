@@ -5,12 +5,14 @@ from __future__ import annotations
 import datetime as dt
 import math
 import uuid
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
+from app.core.config import settings
 from app.schemas.schema import (
     ColumnInfo,
     RelationshipInfo,
@@ -60,11 +62,25 @@ class TableDataService:
         schema_name: str = "public",
         default_limit: int = DEFAULT_ROW_LIMIT,
         max_limit: int = MAX_ROW_LIMIT,
+        excluded_tables: Iterable[str] | None = None,
     ):
         self.engine = engine
         self.schema_name = schema_name
         self.default_limit = default_limit
         self.max_limit = max_limit
+        self.excluded_tables = {
+            name.strip().casefold()
+            for name in (
+                settings.analysis_exclusion_set
+                if excluded_tables is None
+                else excluded_tables
+            )
+            if name and name.strip()
+        }
+
+    def _is_excluded(self, table_name: str) -> bool:
+        """True para tabelas do armazenamento interno que não devem ser expostas."""
+        return table_name.casefold() in self.excluded_tables
 
     def _quote(self, name: str) -> str:
         return self.engine.dialect.identifier_preparer.quote(name)
@@ -75,7 +91,7 @@ class TableDataService:
 
     def _describe(self, table_name: str, inspector) -> tuple[list[ColumnInfo], list[str]]:
         table_names = inspector.get_table_names(schema=self.schema_name)
-        if table_name not in table_names:
+        if table_name not in table_names or self._is_excluded(table_name):
             raise TableNotFoundError(table_name)
 
         primary_key = (
@@ -142,12 +158,14 @@ class TableDataService:
         """Return both foreign keys owned by the table and keys pointing at it."""
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names(schema=self.schema_name)
-        if table_name not in table_names:
+        if table_name not in table_names or self._is_excluded(table_name):
             raise TableNotFoundError(table_name)
 
         outbound: list[RelationshipInfo] = []
         inbound: list[RelationshipInfo] = []
         for source_table in table_names:
+            if self._is_excluded(source_table):
+                continue
             for foreign_key in inspector.get_foreign_keys(
                 source_table, schema=self.schema_name
             ):
@@ -161,6 +179,12 @@ class TableDataService:
                     target_schema=target_schema,
                     target_columns=list(foreign_key.get("referred_columns") or []),
                 )
+                if (
+                    target_schema == self.schema_name
+                    and self._is_excluded(relationship.target_table)
+                ):
+                    # Não expõe uma referência a tabela interna do GenomAI.
+                    continue
                 if source_table == table_name:
                     outbound.append(relationship)
                 if (

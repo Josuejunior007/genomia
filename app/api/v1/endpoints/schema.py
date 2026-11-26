@@ -1,4 +1,7 @@
+"""Rota de inspeção do schema analisado."""
+
 from fastapi import APIRouter
+
 from app.core.config import settings
 from app.db.session import engine
 from app.schemas.schema import SchemaSnapshot
@@ -9,4 +12,5 @@ router = APIRouter()
 
 @router.get("", response_model=SchemaSnapshot, summary="Inspecionar estrutura do banco")
 def get_schema() -> SchemaSnapshot:
+    """Retorna a fotografia estrutural do schema, sem tabelas internas."""
     return SchemaService(engine, settings.db_schema).snapshot()

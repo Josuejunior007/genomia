@@ -1,22 +1,24 @@
 services:
-  mariadb:
-    image: mariadb:11
-    container_name: mariadb_ai_manager
+  postgres:
+    image: postgres:16-alpine
+    container_name: genomai_postgres
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: root_password
-      MARIADB_DATABASE: ai_manager
-      MARIADB_USER: app_user
-      MARIADB_PASSWORD: app_password
+      POSTGRES_DB: ai_manager
+      POSTGRES_USER: genomai_admin
+      POSTGRES_PASSWORD: change_me_admin
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./scripts/local_reader_role.sql:/docker-entrypoint-initdb.d/02-reader.sql:ro
+      - ./scripts/app_store_postgres.sql:/docker-entrypoint-initdb.d/03-app-store.sql:ro
+      - ./scripts/local_app_writer_role.sql:/docker-entrypoint-initdb.d/04-app-writer.sql:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "pg_isready -U genomai_admin -d ai_manager"]
       interval: 10s
       timeout: 5s
       retries: 10
 volumes:
-  mariadb_data:
+  postgres_data:

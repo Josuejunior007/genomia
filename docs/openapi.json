@@ -1,0 +1,2565 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GenomAI API",
+    "description": "GenomAI: catálogo, análise estrutural, revisão humana por personas e documentação. Sugestões nunca são executadas automaticamente; a IA recebe apenas metadados seguros.",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/api/v1/schema": {
+      "get": {
+        "tags": [
+          "schema"
+        ],
+        "summary": "Inspecionar estrutura do banco",
+        "description": "Retorna a fotografia estrutural do schema, sem tabelas internas.",
+        "operationId": "get_schema_api_v1_schema_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/advisor/analyze": {
+      "get": {
+        "tags": [
+          "advisor"
+        ],
+        "summary": "Analisar qualidade estrutural",
+        "description": "Executa regras determinísticas sobre os metadados do schema.",
+        "operationId": "analyze_schema_api_v1_advisor_analyze_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/advisor/ai-analyze": {
+      "post": {
+        "tags": [
+          "advisor"
+        ],
+        "summary": "Analisar esquema com Groq e salvar propostas para revisão",
+        "description": "Envia somente metadados seguros à Groq e persiste as propostas.\n\nO payload é construído por ``build_safe_schema_context`` e validado antes da\nchamada. Um registro em ``ai_metadata_audits`` guarda apenas hash/contagens.",
+        "operationId": "analyze_schema_with_ai_api_v1_advisor_ai_analyze_post",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/tables": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Listar tabelas do catálogo",
+        "description": "Lista tabelas e permite busca por nome de tabela ou coluna.",
+        "operationId": "list_tables_api_v1_catalog_tables_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/tables/{table_name}": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Detalhar tabela",
+        "description": "Retorna colunas, chaves e índices de uma tabela do schema analisado.",
+        "operationId": "get_table_api_v1_catalog_tables__table_name__get",
+        "parameters": [
+          {
+            "name": "table_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/tables/{table_name}/rows": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Consultar registros da tabela",
+        "description": "Pagina registros em modo somente leitura.\n\nEsses valores são exibidos na interface de exploração e **nunca** são\nenviados ao provedor de IA.",
+        "operationId": "get_table_rows_api_v1_catalog_tables__table_name__rows_get",
+        "parameters": [
+          {
+            "name": "table_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table Name"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRows"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/tables/{table_name}/relationships": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Consultar relacionamentos da tabela",
+        "description": "Lista as chaves estrangeiras de saída e de entrada desta tabela.",
+        "operationId": "get_table_relationships_api_v1_catalog_tables__table_name__relationships_get",
+        "parameters": [
+          {
+            "name": "table_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableRelationships"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Listar sugestões para revisão",
+        "description": "Lista sugestões com filtros de status, tabela e busca textual.",
+        "operationId": "list_suggestions_api_v1_suggestions_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(pending|approved|rejected|partially_approved|all)$",
+              "default": "pending",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "table",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Table"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewItem"
+                  },
+                  "title": "Response List Suggestions Api V1 Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Registrar sugestão para revisão",
+        "description": "Cria uma sugestão validando tabela, coluna e tipo contra o schema.",
+        "operationId": "create_suggestion_api_v1_suggestions_post",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}": {
+      "patch": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Editar sugestão e gerar nova versão",
+        "description": "Edita uma sugestão; por padrão ela volta para ``pending``.",
+        "operationId": "update_suggestion_api_v1_suggestions__suggestion_id__patch",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}/review": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Aprovar, rejeitar ou aprovar parcialmente uma sugestão",
+        "description": "Registra a decisão humana sem aplicar qualquer mudança no banco.",
+        "operationId": "review_suggestion_api_v1_suggestions__suggestion_id__review_post",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}/revisions": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Listar versões de uma sugestão",
+        "description": "Retorna o histórico imutável de edições da sugestão.",
+        "operationId": "list_revisions_api_v1_suggestions__suggestion_id__revisions_get",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionRevisionItem"
+                  },
+                  "title": "Response List Revisions Api V1 Suggestions  Suggestion Id  Revisions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}/apply-preview": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Pré-visualizar SQL de aplicação",
+        "description": "Mostra o SQL server-side e os bloqueios antes de aplicar.",
+        "operationId": "preview_apply_api_v1_suggestions__suggestion_id__apply_preview_get",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}/apply": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Aplicar mudança aprovada no banco analisado",
+        "description": "Aplica uma mudança aprovada, com auditoria e validação de schema.",
+        "operationId": "apply_suggestion_api_v1_suggestions__suggestion_id__apply_post",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/apply-logs": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Consultar auditoria de aplicações",
+        "description": "Lista tentativas de aplicação, com sucesso/falha e SQL executado.",
+        "operationId": "list_apply_logs_api_v1_apply_logs_get",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Suggestion Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplyLogItem"
+                  },
+                  "title": "Response List Apply Logs Api V1 Apply Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/metrics": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Indicadores de governança",
+        "description": "Retorna cobertura de metadados e status das sugestões.\n\nO cálculo de ``partially_approved`` não faz consulta extra: os únicos\nstatus possíveis são pending/approved/rejected/partially_approved.",
+        "operationId": "metrics_api_v1_dashboard_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/personas": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Listar personas",
+        "description": "Retorna a matriz de personas e capacidades usada pelo frontend.",
+        "operationId": "list_personas_api_v1_personas_get",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonaItem"
+                  },
+                  "title": "Response List Personas Api V1 Personas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/storage": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Diagnóstico de isolamento dos bancos",
+        "description": "Explica onde ficam análise, armazenamento interno e escrita opcional.",
+        "operationId": "storage_info_api_v1_system_storage_get",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/privacy/policy": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Consultar política de privacidade da IA",
+        "description": "Lista campos permitidos, proibidos, categorias sensíveis e exclusões.",
+        "operationId": "privacy_policy_api_v1_privacy_policy_get",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/privacy/ai-payload": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Pré-visualizar exatamente o payload enviado à IA",
+        "description": "Gera o payload seguro sem chamar nenhum provedor de IA.\n\nÚtil para auditoria: mostra o JSON, o relatório de redações e o SHA-256.\nNenhum registro, default ou valor de coluna aparece aqui.",
+        "operationId": "preview_ai_payload_api_v1_privacy_ai_payload_get",
+        "parameters": [
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiPayloadPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/privacy/audits": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Consultar auditorias de envio de metadados à IA",
+        "description": "Lista hashes e contagens de envios anteriores, sem conteúdo do payload.",
+        "operationId": "list_privacy_audits_api_v1_privacy_audits_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-GenomAI-Persona",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Genomai-Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrivacyAuditItem"
+                  },
+                  "title": "Response List Privacy Audits Api V1 Privacy Audits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root",
+        "description": "Identifica a API e aponta para o Swagger.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "description": "Confirma que a API consegue acessar o banco analisado.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AiPayloadPreview": {
+        "properties": {
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "report": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Report"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payload",
+          "report",
+          "sha256",
+          "policy"
+        ],
+        "title": "AiPayloadPreview",
+        "description": "Prévia exata do payload que seria enviado à IA."
+      },
+      "AnalysisReport": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "tables_analyzed": {
+            "type": "integer",
+            "title": "Tables Analyzed"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "tables_analyzed",
+          "recommendations"
+        ],
+        "title": "AnalysisReport",
+        "description": "Relatório da análise estrutural determinística."
+      },
+      "ApplyLogItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Id"
+          },
+          "persona": {
+            "type": "string",
+            "title": "Persona"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "sql_text": {
+            "type": "string",
+            "title": "Sql Text"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "suggestion_id",
+          "persona",
+          "action",
+          "sql_text",
+          "success",
+          "created_at"
+        ],
+        "title": "ApplyLogItem",
+        "description": "Registro de auditoria de aplicação."
+      },
+      "ApplyPreview": {
+        "properties": {
+          "suggestion_id": {
+            "type": "integer",
+            "title": "Suggestion Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sql"
+          },
+          "can_apply": {
+            "type": "boolean",
+            "title": "Can Apply",
+            "default": false
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blockers"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestion_id",
+          "action"
+        ],
+        "title": "ApplyPreview",
+        "description": "Prévia do SQL que seria executado, com bloqueios explícitos."
+      },
+      "ApplyResponse": {
+        "properties": {
+          "suggestion_id": {
+            "type": "integer",
+            "title": "Suggestion Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sql"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "applied_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied By"
+          },
+          "log_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestion_id",
+          "action",
+          "success"
+        ],
+        "title": "ApplyResponse",
+        "description": "Resultado de uma tentativa de aplicação."
+      },
+      "ColumnInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "nullable": {
+            "type": "boolean",
+            "title": "Nullable"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "is_primary_key": {
+            "type": "boolean",
+            "title": "Is Primary Key",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "nullable"
+        ],
+        "title": "ColumnInfo",
+        "description": "Coluna de uma tabela, sem qualquer valor de registro."
+      },
+      "ForeignKeyInfo": {
+        "properties": {
+          "constrained_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Constrained Columns"
+          },
+          "referred_table": {
+            "type": "string",
+            "title": "Referred Table"
+          },
+          "referred_schema": {
+            "type": "string",
+            "title": "Referred Schema",
+            "default": "public"
+          },
+          "referred_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Referred Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "constrained_columns",
+          "referred_table",
+          "referred_columns"
+        ],
+        "title": "ForeignKeyInfo",
+        "description": "Chave estrangeira declarada no banco analisado."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IndexInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "column_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Column Names"
+          },
+          "unique": {
+            "type": "boolean",
+            "title": "Unique"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "column_names",
+          "unique"
+        ],
+        "title": "IndexInfo",
+        "description": "Índice declarado no banco analisado."
+      },
+      "PersonaItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "capabilities"
+        ],
+        "title": "PersonaItem",
+        "description": "Persona disponível e suas capacidades."
+      },
+      "PrivacyAuditItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "payload_sha256": {
+            "type": "string",
+            "title": "Payload Sha256"
+          },
+          "tables_count": {
+            "type": "integer",
+            "title": "Tables Count"
+          },
+          "columns_count": {
+            "type": "integer",
+            "title": "Columns Count"
+          },
+          "sensitive_columns_count": {
+            "type": "integer",
+            "title": "Sensitive Columns Count"
+          },
+          "redacted_identifiers_count": {
+            "type": "integer",
+            "title": "Redacted Identifiers Count"
+          },
+          "removed_fields_count": {
+            "type": "integer",
+            "title": "Removed Fields Count"
+          },
+          "excluded_tables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Tables"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "model",
+          "payload_sha256",
+          "tables_count",
+          "columns_count",
+          "sensitive_columns_count",
+          "redacted_identifiers_count",
+          "removed_fields_count",
+          "triggered_by",
+          "status",
+          "created_at"
+        ],
+        "title": "PrivacyAuditItem",
+        "description": "Auditoria de um envio de metadados à IA, sem conteúdo do payload."
+      },
+      "Recommendation": {
+        "properties": {
+          "severity": {
+            "type": "string",
+            "pattern": "^(low|medium|high)$",
+            "title": "Severity"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "suggested_sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Sql"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "severity",
+          "table",
+          "category",
+          "message"
+        ],
+        "title": "Recommendation",
+        "description": "Recomendação determinística ou candidata produzida por IA."
+      },
+      "RelationshipInfo": {
+        "properties": {
+          "constraint_name": {
+            "type": "string",
+            "title": "Constraint Name",
+            "default": ""
+          },
+          "source_table": {
+            "type": "string",
+            "title": "Source Table"
+          },
+          "source_schema": {
+            "type": "string",
+            "title": "Source Schema"
+          },
+          "source_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Columns"
+          },
+          "target_table": {
+            "type": "string",
+            "title": "Target Table"
+          },
+          "target_schema": {
+            "type": "string",
+            "title": "Target Schema"
+          },
+          "target_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_table",
+          "source_schema",
+          "source_columns",
+          "target_table",
+          "target_schema",
+          "target_columns"
+        ],
+        "title": "RelationshipInfo",
+        "description": "Relacionamento de chave estrangeira entre duas tabelas."
+      },
+      "ReviewItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "suggested_sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Sql"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "previous_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Status"
+          },
+          "review_comment": {
+            "type": "string",
+            "title": "Review Comment",
+            "default": ""
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "edited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "applied_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied By"
+          },
+          "apply_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apply Error"
+          },
+          "revision_count": {
+            "type": "integer",
+            "title": "Revision Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "table",
+          "kind",
+          "description",
+          "confidence",
+          "rationale"
+        ],
+        "title": "ReviewItem",
+        "description": "Sugestão exposta para a interface de revisão."
+      },
+      "ReviewRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "pattern": "^(approved|rejected|partially_approved)$",
+            "title": "Decision"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewRequest",
+        "description": "Decisão humana sobre uma sugestão."
+      },
+      "ReviewResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "comment"
+        ],
+        "title": "ReviewResponse",
+        "description": "Resposta de uma revisão concluída."
+      },
+      "SchemaSnapshot": {
+        "properties": {
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "schema": {
+            "type": "string",
+            "title": "Schema"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableInfo"
+            },
+            "type": "array",
+            "title": "Tables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "database",
+          "schema",
+          "tables"
+        ],
+        "title": "SchemaSnapshot",
+        "description": "Fotografia estrutural do schema analisado."
+      },
+      "StorageInfo": {
+        "properties": {
+          "analyzed": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Analyzed"
+          },
+          "app_store": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "App Store"
+          },
+          "isolation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Isolation"
+          },
+          "ai": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ai"
+          }
+        },
+        "type": "object",
+        "required": [
+          "analyzed",
+          "app_store",
+          "isolation",
+          "ai"
+        ],
+        "title": "StorageInfo",
+        "description": "Diagnóstico das três conexões e do isolamento."
+      },
+      "SuggestionCreate": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Table"
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Rationale"
+          },
+          "suggested_sql": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Sql"
+          }
+        },
+        "type": "object",
+        "required": [
+          "table",
+          "kind",
+          "description",
+          "confidence",
+          "rationale"
+        ],
+        "title": "SuggestionCreate",
+        "description": "Dados para registrar uma sugestão no banco interno."
+      },
+      "SuggestionRevisionItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "suggestion_id": {
+            "type": "integer",
+            "title": "Suggestion Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "suggested_sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Sql"
+          },
+          "edited_by": {
+            "type": "string",
+            "title": "Edited By"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "suggestion_id",
+          "version",
+          "table",
+          "kind",
+          "description",
+          "confidence",
+          "status",
+          "rationale",
+          "edited_by",
+          "comment",
+          "created_at"
+        ],
+        "title": "SuggestionRevisionItem",
+        "description": "Versão histórica de uma sugestão."
+      },
+      "SuggestionUpdate": {
+        "properties": {
+          "table": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "suggested_sql": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Sql"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Comment",
+            "default": ""
+          },
+          "reopen": {
+            "type": "boolean",
+            "title": "Reopen",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "SuggestionUpdate",
+        "description": "Edição humana de uma sugestão.\n\nA edição sempre gera uma revisão imutável em ``suggestion_revisions``. Se\n``reopen`` for verdadeiro (padrão), a sugestão volta para ``pending`` para\nnova decisão, inclusive quando havia sido parcialmente aprovada."
+      },
+      "TableInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "schema": {
+            "type": "string",
+            "title": "Schema",
+            "default": "public"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInfo"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "primary_key": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Primary Key"
+          },
+          "foreign_keys": {
+            "items": {
+              "$ref": "#/components/schemas/ForeignKeyInfo"
+            },
+            "type": "array",
+            "title": "Foreign Keys"
+          },
+          "indexes": {
+            "items": {
+              "$ref": "#/components/schemas/IndexInfo"
+            },
+            "type": "array",
+            "title": "Indexes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "columns",
+          "primary_key",
+          "foreign_keys",
+          "indexes"
+        ],
+        "title": "TableInfo",
+        "description": "Metadados completos de uma tabela."
+      },
+      "TableRelationships": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "schema": {
+            "type": "string",
+            "title": "Schema"
+          },
+          "outbound": {
+            "items": {
+              "$ref": "#/components/schemas/RelationshipInfo"
+            },
+            "type": "array",
+            "title": "Outbound"
+          },
+          "inbound": {
+            "items": {
+              "$ref": "#/components/schemas/RelationshipInfo"
+            },
+            "type": "array",
+            "title": "Inbound"
+          }
+        },
+        "type": "object",
+        "required": [
+          "table",
+          "schema",
+          "outbound",
+          "inbound"
+        ],
+        "title": "TableRelationships",
+        "description": "Relacionamentos de saída e de entrada de uma tabela."
+      },
+      "TableRows": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "schema": {
+            "type": "string",
+            "title": "Schema"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInfo"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "table",
+          "schema",
+          "columns",
+          "rows",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "TableRows",
+        "description": "Página de registros, usada apenas na interface de exploração."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

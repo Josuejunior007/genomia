@@ -1,5 +1,11 @@
+"""Rota de métricas de governança.
 
-from fastapi import APIRouter, HTTPException, Depends
+As métricas combinam dados estruturais do schema analisado com contagens do
+armazenamento interno. Tabelas internas são excluídas do snapshot por
+``SchemaService``.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -15,66 +21,72 @@ router = APIRouter()
 
 @router.get("/metrics", summary="Indicadores de governança")
 def metrics(db: Session = Depends(get_app_db)):
+    """Retorna cobertura de metadados e status das sugestões.
+
+    O cálculo de ``partially_approved`` não faz consulta extra: os únicos
+    status possíveis são pending/approved/rejected/partially_approved.
+    """
     try:
-        snapshot = SchemaService(
-            engine, settings.db_schema
-        ).snapshot()
+        snapshot = SchemaService(engine, settings.db_schema).snapshot()
 
-        total_suggestions = db.scalar(
-            select(func.count()).select_from(Suggestion)
-        ) or 0
+        total_suggestions = db.scalar(select(func.count()).select_from(Suggestion)) or 0
 
-        pending = db.scalar(
-            select(func.count())
-            .select_from(Suggestion)
-            .where(Suggestion.status == "pending")
-        ) or 0
+        pending = (
+            db.scalar(
+                select(func.count())
+                .select_from(Suggestion)
+                .where(Suggestion.status == "pending")
+            )
+            or 0
+        )
 
-        approved = db.scalar(
-            select(func.count())
-            .select_from(Suggestion)
-            .where(Suggestion.status == "approved")
-        ) or 0
+        approved = (
+            db.scalar(
+                select(func.count())
+                .select_from(Suggestion)
+                .where(Suggestion.status == "approved")
+            )
+            or 0
+        )
 
-        rejected = db.scalar(
-            select(func.count())
-            .select_from(Suggestion)
-            .where(Suggestion.status == "rejected")
-        ) or 0
+        rejected = (
+            db.scalar(
+                select(func.count())
+                .select_from(Suggestion)
+                .where(Suggestion.status == "rejected")
+            )
+            or 0
+        )
 
         reviewed = approved + rejected
 
-        review_rate = round(
-            reviewed / total_suggestions * 100, 1
-        ) if total_suggestions else 0
+        review_rate = (
+            round(reviewed / total_suggestions * 100, 1) if total_suggestions else 0
+        )
+
+        partially_approved = max(0, total_suggestions - pending - approved - rejected)
 
     except SQLAlchemyError:
         raise HTTPException(
             status_code=503,
-            detail=(
-                "Métricas indisponíveis; verifique "
-                "a conexão com o banco."
-            ),
+            detail="Métricas indisponíveis; verifique a conexão com o banco.",
         )
 
     total = len(snapshot.tables)
 
-    tables_with_metadata = sum(
-        1 for table in snapshot.tables
-        if table.columns
-    )
+    tables_with_metadata = sum(1 for table in snapshot.tables if table.columns)
 
     return {
         "tables_total": total,
         "tables_with_basic_metadata": tables_with_metadata,
-        "metadata_coverage_percent": round(
-            tables_with_metadata / total * 100, 1
-        ) if total else 0,
+        "metadata_coverage_percent": (
+            round(tables_with_metadata / total * 100, 1) if total else 0
+        ),
         "tables_without_primary_key": sum(
-            1 for table in snapshot.tables
-            if not table.primary_key
+            1 for table in snapshot.tables if not table.primary_key
         ),
         "pending_suggestions": pending,
+        "partially_approved_suggestions": partially_approved,
         "total_suggestions": total_suggestions,
         "approved_suggestions": approved,
         "rejected_suggestions": rejected,

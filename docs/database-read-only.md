@@ -33,14 +33,22 @@ Configure `.env` localmente (ou o secret manager do deploy), sem commitar o arqu
 DATABASE_URL=postgresql+psycopg://genomia_reader:<senha>@<host>:5432/<database>?sslmode=require
 DB_SCHEMA=public
 DB_READ_ONLY=true
-APP_DATABASE_URL=sqlite:///./genomai_app.db
+
+# Banco interno do GenomAI (sugestões/auditoria), separado do banco analisado.
+# Em produção use PostgreSQL com schema próprio; SQLite é só desenvolvimento.
+APP_DATABASE_URL=postgresql+psycopg://genomia_app_writer:<senha>@<host>:5432/<database>?sslmode=require
+APP_DB_SCHEMA=genomai_app
+APP_DB_AUTO_CREATE=false
+APP_STORE_REQUIRE_REMOTE=true
 ```
 
 `DATABASE_URL` é usada apenas para inspecionar o banco alvo. O GenomAI mantém
 sugestões e decisões em `APP_DATABASE_URL`, uma conexão separada sob controle
-da aplicação. O SQLite é o padrão de desenvolvimento; em produção, configure
-um banco dedicado e faça backup desse armazenamento. Não aponte essa variável
-para a role de leitura do banco alvo.
+da aplicação. Em produção, configure um schema dedicado (`genomai_app`) com uma
+role de escrita própria e faça backup desse armazenamento. Não aponte essa
+variável para a role de leitura do banco alvo nem para o mesmo schema analisado.
+
+Detalhes de provisionamento e migração: [Persistência e isolamento](persistencia-e-isolamento.md).
 
 Substitua os campos entre sinais de menor/maior com os dados do projeto; não use
 a URL da role administrativa. Proteja e faça rotação da senha pelo secret manager.

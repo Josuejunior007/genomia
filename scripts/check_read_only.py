@@ -8,6 +8,7 @@ from app.db.permissions import validate_read_only
 
 
 def main() -> int:
+    """Valida a role configurada e retorna 0 (ok) ou 1 (falha)."""
     engine = create_engine(
         settings.database_url, pool_pre_ping=True, connect_args={"connect_timeout": 5}
     )

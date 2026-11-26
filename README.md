@@ -1,167 +1,211 @@
-## Como o backend funciona?
+# GenomAI — catálogo, governança e documentação de dados
 
-O fluxo é basicamente assim:
+Backend FastAPI + frontend React para inspecionar a **estrutura** de um banco
+PostgreSQL/Supabase, gerar recomendações, revisar sugestões com controle humano,
+documentar o projeto e aplicar mudanças aprovadas com permissões por persona.
 
-1. A API recebe uma requisição.
-2. A rota correspondente chama o serviço necessário.
-3. Quando precisa analisar o banco, o sistema lê os metadados do PostgreSQL, como tabelas, colunas, tipos, chaves e índices.
-4. O analisador aplica algumas regras para encontrar possíveis pontos de atenção.
-5. A API devolve o resultado em JSON para quem fez a requisição.
+> **Princípio central:** a IA recebe apenas metadados seguros. Registros, valores
+> de colunas, defaults e segredos nunca entram no payload. A IA também nunca
+> executa mudanças no banco.
 
-Por enquanto, o foco é na estrutura do banco. O sistema não precisa ler os registros dos atendimentos para fazer essa análise.
+---
 
-## O que cada parte faz?
+## O que a mentora pediu e o que foi entregue
 
-### `app/main.py`
+| Pedido | Situação | Onde ver |
+|---|---|---|
+| "A integração ao banco está sendo via API?" | **Sim.** O navegador fala somente HTTP com a FastAPI; a FastAPI acessa o banco via SQLAlchemy no servidor. Não há credenciais nem acesso direto ao banco no frontend. | [Arquitetura](docs/visao-geral-arquitetura.md) |
+| Botão **Editar** nas sugestões (inclusive parcialmente aprovadas) | **Entregue.** Edição versionada, reabre para revisão, histórico imutável. | [Guia do analista](docs/guia-analista-dados.md) |
+| Alteração diretamente no BD **respeitando personas** | **Entregue (controlada).** Só `desenvolvedor`/`administrador` aplicam; somente SQL gerado pelo servidor (`CREATE INDEX`, `COMMENT ON`); exige aprovação, `DB_WRITE_ENABLED=true`, conexão de escrita dedicada e auditoria. | [Personas](docs/personas-permissoes.md) |
+| Documentar código e projeto para analistas, devs e IA | **Entregue.** Guias específicos + referência da API + OpenAPI exportado. | [Índice da documentação](docs/README.md) |
+| Sugestões no banco, não só no PC, e isoladas da IA | **Entregue.** Armazenamento interno em schema PostgreSQL próprio (`genomai_app`), conexão separada, exclusão das tabelas internas da análise e scripts de migração. | [Persistência e isolamento](docs/persistencia-e-isolamento.md) |
+| Épico: não enviar dados pessoais/sensíveis à IA | **Entregue.** Allowlist de metadados, redação de identificadores, marcação de colunas sensíveis, prévia auditável e hash SHA-256. | [Privacidade da IA](docs/seguranca-privacidade-ia.md) |
 
-É onde a aplicação FastAPI é criada. Também registra as rotas e tem as rotas básicas para verificar se a API está funcionando e se consegue acessar o banco.
+---
 
-### `app/core/config.py`
+## Arquitetura em uma imagem
 
-Centraliza as configurações, como o nome da aplicação, a URL de conexão, o schema que será analisado e algumas opções do projeto. As informações de conexão ficam no arquivo `.env`, que não deve ser compartilhado nem enviado ao GitHub.
-
-### `app/db/session.py`
-
-Configura a conexão com o PostgreSQL usando SQLAlchemy. Também define recursos para abrir e fechar sessões quando forem necessários.
-
-### `app/schemas/schema.py`
-
-Define o formato dos dados usados pela API. Por exemplo, descreve como representar uma coluna, uma tabela, uma chave estrangeira, uma recomendação e o resultado de uma análise.
-
-### `app/services/schema_service.py`
-
-É a parte que consulta a estrutura do banco. Ela identifica as tabelas e coleta informações sobre as colunas, chaves primárias, chaves estrangeiras e índices. Depois organiza essas informações para os outros serviços utilizarem.
-
-### `app/services/advisor_service.py`
-
-É onde ficam as regras iniciais de análise. Atualmente, ele verifica situações como tabela sem chave primária, coluna de chave estrangeira sem índice identificado e alguns casos simples de nomenclatura. Quando encontra algo que merece atenção, monta uma recomendação.
-
-Essas regras são programadas por nós, então ainda não é uma análise feita por IA generativa. A ideia é usar isso como uma primeira etapa antes de integrar um modelo de IA.
-
-### `app/api/v1/router.py`
-
-Organiza as rotas por funcionalidade, para o código não ficar todo concentrado em um único arquivo.
-
-### `app/api/v1/endpoints/`
-
-Essa pasta contém as rotas que podem ser chamadas pela API:
-
-- `schema.py`: retorna a estrutura do banco.
-- `advisor.py`: executa a análise e retorna as recomendações.
-- `catalog.py`: permite pesquisar tabelas e consultar seus detalhes.
-- `dashboard.py`: retorna alguns indicadores básicos.
-- `demo.py`: demonstra um fluxo de revisão de sugestões, permitindo aprovar ou rejeitar uma sugestão.
-
-### `tests/test_advisor.py`
-
-Contém testes automatizados para verificar algumas regras do analisador, como a identificação de tabelas sem chave primária e a criação de sugestões de índice para colunas de chave estrangeira.
-
-## O que já dá para demonstrar?
-
-A documentação automática do FastAPI fica em `http://127.0.0.1:8000/docs`, depois de iniciar o projeto.
-
-As principais rotas são:
-
-| Rota | Para que serve |
-|---|---|
-| `GET /health` | Verifica se a API consegue acessar o banco. |
-| `GET /api/v1/schema` | Mostra a estrutura do banco. |
-| `GET /api/v1/advisor/analyze` | Executa as regras de análise. |
-| `GET /api/v1/catalog/tables` | Lista e pesquisa tabelas. |
-| `GET /api/v1/catalog/tables/{table_name}` | Mostra os detalhes de uma tabela. |
-| `GET /api/v1/catalog/tables/{table_name}/rows` | Pagina os registros da tabela (`limit` de 1 a 200 e `offset`). |
-| `GET /api/v1/catalog/tables/{table_name}/relationships` | Lista os relacionamentos de entrada e de saída da tabela. |
-| `GET /api/v1/dashboard/metrics` | Mostra indicadores básicos. |
-| `GET /api/v1/suggestions` | Lista sugestões persistidas (`status=pending`, `approved`, `rejected` ou `all`). |
-| `POST /api/v1/suggestions` | Registra uma sugestão para revisão humana. |
-| `POST /api/v1/suggestions/{suggestion_id}/review` | Aprova ou rejeita uma sugestão pendente. |
-
-## Como executar
-
-1. Abrir a pasta do projeto no VS Code ou na sua ide favorita.
-2. Criar um ambiente virtual e instalar as dependências:
-
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-3. Copiar `.env.example` para `.env` e configurar `DATABASE_URL` com uma role PostgreSQL somente leitura. `APP_DATABASE_URL` aponta para o banco controlado pelo GenomAI, que guarda sugestões e decisões (por padrão, SQLite local; em produção, configure um PostgreSQL dedicado). Nunca reutilize a role administrativa ou a role somente leitura do banco analisado para `APP_DATABASE_URL`.
-4. Iniciar a API:
-
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-5. Abrir `http://127.0.0.1:8000/docs` no navegador e testar as rotas.
-
-### Interface web (React)
-
-O frontend demonstrativo fica em `frontend/` e consome a API FastAPI. Com o backend
-rodando na porta `8000`, em outro terminal:
-
-Primeiro seleciona a pasta no front ende 
-```bash
-cd .\frontend
+```mermaid
+flowchart LR
+    UI["Frontend React\n(navegador)"] -->|"HTTP + X-GenomAI-Persona"| API["FastAPI\nGenomAI"]
+    API -->|"DATABASE_URL\nrole read-only"| DB[("PostgreSQL/Supabase\nschema analisado")]
+    API -->|"APP_DATABASE_URL\nrole de escrita interna"| STORE[("Armazenamento GenomAI\nschema genomai_app")]
+    API -->|"WRITE_DATABASE_URL\nopcional, role de DDL"| DB
+    API -->|"metadados seguros\n(sem linhas/defaults)"| AI["Groq / outro provedor"]
+    AI -->|"propostas JSON"| API
+    API -->|"sugestões + auditoria"| STORE
 ```
-Agora você instala o npm
+
+Três conexões **nunca** compartilham engine, sessão ou credenciais:
+
+1. `DATABASE_URL` — análise, somente leitura.
+2. `APP_DATABASE_URL` — sugestões, revisões, auditorias.
+3. `WRITE_DATABASE_URL` — opcional, apenas para aplicar mudanças aprovadas.
+
+---
+
+## Funcionalidades
+
+- Catálogo de tabelas, colunas, chaves, índices, relacionamentos e amostra de
+  registros (com paginação) em modo somente leitura.
+- Análise determinística de qualidade estrutural.
+- Análise com IA (Groq) usando **exclusivamente metadados seguros**.
+- Revisão humana: aprovar, rejeitar, **aprovar parcialmente** e **editar**.
+- Histórico versionado de cada edição (`suggestion_revisions`).
+- Aplicação controlada de mudanças no banco, com preview do SQL e auditoria.
+- Personas e capacidades aplicadas no backend.
+- Diagnóstico de isolamento dos bancos (`/api/v1/system/storage`).
+- Prévia exata do payload de IA (`/api/v1/privacy/ai-payload`).
+
+---
+
+## Início rápido (desenvolvimento)
+
+### 1. Backend
+
 ```bash
-npm install
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
+uvicorn app.main:app --reload
 ```
-Agora você pode rodar a aplicação
-```bash
-npm run dev
-```
-Se não funcionar automatico pelo readme pegue o codigo e va escrevendo no terminal
 
-Agora para encerrar a atividade, você primeiro encerra no o front, seleciona o terminal e digita "q" e da enter e depois você vai no terminal do back faz Control+c 
+Abra `http://127.0.0.1:8000/docs`.
 
-Abra `http://localhost:5173`. A URL da API pode ser alterada com `VITE_API_URL`
-(veja `frontend/.env.example`). O `CORS_ORIGINS` padrão do backend já permite
-`http://localhost:5173`.
-
-O frontend apresenta métricas, exploração de tabelas e colunas, recomendações da
-análise estrutural e revisão humana das sugestões persistidas.
-
-## Limites atuais e próximos passos
-
-Essa versão é um MVP para validar a ideia e demonstrar a estrutura do backend. Ainda faltam algumas partes para chegar à proposta completa:
-
-- Integrar uma IA generativa, como Azure OpenAI, para ajudar a sugerir descrições e interpretar nomes de tabelas e campos.
-- Integrar autenticação e permissões antes de disponibilizar a API fora do ambiente de desenvolvimento.
-- Configurar `CORS_ORIGINS` com a origem real do frontend no ambiente de execução.
-- Melhorar as métricas do dashboard para mostrar a cobertura real da documentação e da governança.
-- Evoluir a interface com autenticação e fluxos de produção.
-
-O projeto ainda não usa Power BI nem Microsoft Fabric. A documentação inicial os
-cita como tecnologias possíveis para etapas futuras de visualização; nesta versão,
-os indicadores são calculados pelo backend e mostrados diretamente pela interface
-React. Uma integração com Fabric/Power BI pode ser avaliada se houver necessidade
-de relatórios corporativos ou compartilhamento analítico fora do GenomAI.
-
-As sugestões e decisões de revisão ficam persistidas no banco interno do GenomAI. As sugestões não são aplicadas automaticamente ao banco analisado. A integração com Groq é opcional e permanece desativada até `AI_ENABLED=true` e `GROQ_API_KEY` estarem configurados.
-
-### Análise com Groq
-
-O botão **Analisar com Groq** e a rota `POST /api/v1/advisor/ai-analyze` enviam ao Groq apenas metadados do esquema (tabelas, colunas, tipos, chaves e índices). Valores padrão de colunas e registros do banco não são enviados. O modelo pode explicar problemas e propor documentação, índices ou relações com evidências, riscos e incertezas. As propostas são persistidas como pendentes e aparecem em **Revisão de sugestões**.
-
-As propostas e decisões ficam no banco interno configurado em `APP_DATABASE_URL`. No SQLite padrão, o arquivo fica na pasta do projeto para continuar disponível após fechar e reabrir o backend. Em novas análises, propostas parecidas da mesma tabela são comparadas com as já salvas — pendentes, aprovadas ou rejeitadas — e não entram de novo na fila. Uma falha ou timeout do Groq é mostrada na tela; nenhuma proposta parcial é registrada.
-
-Para ativar a integração, instale as dependências atualizadas e configure no `.env` local:
+No `.env`, configure:
 
 ```dotenv
-AI_ENABLED=true
-GROQ_API_KEY=sua_chave_do_groq_cloud
-GROQ_MODEL=openai/gpt-oss-20b
+DATABASE_URL=postgresql+psycopg://genomia_reader:<senha>@<host>:5432/<db>?sslmode=require
+APP_DATABASE_URL=sqlite:///./genomai_app.db   # dev; em produção use PostgreSQL
 ```
 
-Mantenha a chave fora do Git. Para atualizar uma instalação existente, altere também `GROQ_MODEL` no seu `.env` local para `openai/gpt-oss-20b` e reinstale as dependências com `pip install -r requirements.txt`. O código usa a Chat Completions API com JSON Schema estrito, que força o formato summary e suggestions esperado pela aplicação. Disponibilidade e limites gratuitos dependem das condições atuais da conta no GroqCloud. A IA não executa mudanças, mesmo quando uma sugestão é aprovada; o fluxo atual somente registra a decisão humana. Qualquer SQL candidato é texto informativo para revisão.
+> O SQLite serve para desenvolvimento. Para persistir as sugestões no banco,
+> siga [Persistência e isolamento](docs/persistencia-e-isolamento.md).
 
-Também é importante configurar o acesso ao Supabase com permissões mínimas de leitura. A opção `DB_READ_ONLY` no arquivo de configuração, sozinha, não bloqueia alterações no banco.
+### 2. Frontend
 
-## Resumindo
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-O backend do GenomAI conecta ao PostgreSQL analisado com uma role somente leitura, lê a estrutura, disponibiliza um catálogo e aplica regras iniciais. Sugestões e decisões são persistidas separadamente no armazenamento interno da aplicação.
+Abra `http://localhost:5173`. A URL da API pode ser alterada em
+`frontend/.env` com `VITE_API_URL`.
 
-O frontend React já está conectado à API para apresentar o catálogo, a análise e a revisão humana. Próximos passos possíveis incluem autenticação, integração de IA para propor descrições e relações e, caso necessário, relatórios em Fabric/Power BI. A integração de IA deve usar as rotas de sugestão e preservar a revisão humana antes de qualquer mudança no banco analisado.
+### 3. Testes
+
+```bash
+python -m pytest -q
+cd frontend && npm run build
+```
+
+---
+
+## Personas
+
+A persona é enviada no cabeçalho `X-GenomAI-Persona`. O backend é a barreira de
+segurança; esconder botões no frontend é apenas conveniência.
+
+| Persona | Consulta | Cria/edita | Revisa | Aplica no BD | Auditoria |
+|---|---:|---:|---:|---:|---:|
+| `leitor` | ✅ | — | — | — | — |
+| `analista` | ✅ | ✅ | ✅ | — | — |
+| `desenvolvedor` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `administrador` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+Detalhes e integração com autenticação real em
+[docs/personas-permissoes.md](docs/personas-permissoes.md).
+
+---
+
+## Endpoints principais
+
+| Método | Rota | Persona mínima | Para que serve |
+|---|---|---|---|
+| GET | `/health` | pública | Verifica a conexão com o banco analisado. |
+| GET | `/api/v1/schema` | pública | Estrutura do banco (sem tabelas internas). |
+| GET | `/api/v1/catalog/tables` | pública | Lista/pesquisa tabelas. |
+| GET | `/api/v1/catalog/tables/{name}` | pública | Detalha uma tabela. |
+| GET | `/api/v1/catalog/tables/{name}/rows` | pública | Pagina registros (modo leitura). |
+| GET | `/api/v1/advisor/analyze` | pública | Regras determinísticas. |
+| POST | `/api/v1/advisor/ai-analyze` | `analista` | Analisa com IA e salva propostas. |
+| GET | `/api/v1/suggestions` | `leitor` | Lista sugestões. |
+| POST | `/api/v1/suggestions` | `analista` | Cria sugestão. |
+| PATCH | `/api/v1/suggestions/{id}` | `analista` | Edita e versiona. |
+| POST | `/api/v1/suggestions/{id}/review` | `analista` | Aprova/rejeita/parcial. |
+| GET | `/api/v1/suggestions/{id}/revisions` | `leitor` | Histórico. |
+| GET | `/api/v1/suggestions/{id}/apply-preview` | `desenvolvedor` | SQL e bloqueios. |
+| POST | `/api/v1/suggestions/{id}/apply` | `desenvolvedor` | Aplica mudança aprovada. |
+| GET | `/api/v1/apply-logs` | `desenvolvedor` | Auditoria de aplicações. |
+| GET | `/api/v1/personas` | `leitor` | Matriz de personas. |
+| GET | `/api/v1/system/storage` | `leitor` | Diagnóstico de isolamento. |
+| GET | `/api/v1/privacy/policy` | `leitor` | Política de privacidade da IA. |
+| GET | `/api/v1/privacy/ai-payload` | `leitor` | Prévia do payload + SHA-256. |
+| GET | `/api/v1/privacy/audits` | `leitor` | Histórico de envios (sem conteúdo). |
+
+Referência completa: [docs/api-reference.md](docs/api-reference.md) e
+[docs/openapi.json](docs/openapi.json).
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `DATABASE_URL` | obrigatória | Banco analisado, role **somente leitura**. |
+| `DB_SCHEMA` | `public` | Schema analisado. |
+| `APP_DATABASE_URL` | `sqlite:///./genomai_app.db` | Banco interno de sugestões. Em produção: PostgreSQL. |
+| `APP_DB_SCHEMA` | `genomai_app` | Schema interno (ignorado no SQLite). |
+| `APP_DB_AUTO_CREATE` | `true` | Cria schema/tabelas internas no startup. Em produção, prefira `false` após rodar o SQL. |
+| `APP_STORE_REQUIRE_REMOTE` | `false` | Se `true`, recusa SQLite como armazenamento interno. |
+| `ANALYSIS_EXCLUDED_TABLES` | `["suggestions",...]` | Tabelas que nunca entram na análise/IA. |
+| `WRITE_DATABASE_URL` | vazio | Conexão de escrita dedicada, apenas para aplicar mudanças. |
+| `DB_WRITE_ENABLED` | `false` | Habilita o endpoint de aplicação. |
+| `DEFAULT_PERSONA` | `leitor` | Persona quando o cabeçalho não é enviado. |
+| `AI_ENABLED` | `false` | Habilita a análise com IA. |
+| `GROQ_API_KEY` | vazio | Chave do provedor; nunca versionar. |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` | Modelo usado. |
+| `PRIVACY_MASK_SENSITIVE_IDENTIFIERS` | `false` | Pseudonimiza nomes de colunas sensíveis. |
+| `PRIVACY_REDACT_DIGIT_RUNS` | `true` | Redige sequências de 6+ dígitos em identificadores. |
+
+---
+
+## Documentação
+
+- [Índice da documentação](docs/README.md)
+- [Visão geral da arquitetura](docs/visao-geral-arquitetura.md)
+- [Guia do analista de dados](docs/guia-analista-dados.md)
+- [Guia do desenvolvedor](docs/guia-desenvolvedor.md)
+- [Guia para agentes de IA](docs/guia-ia.md)
+- [Referência da API](docs/api-reference.md)
+- [Mapa do código](docs/mapa-do-codigo.md)
+- [Persistência e isolamento](docs/persistencia-e-isolamento.md)
+- [Segurança e privacidade da IA](docs/seguranca-privacidade-ia.md)
+- [Personas e permissões](docs/personas-permissoes.md)
+- [Integração com outros bancos e IAs](docs/integracao-outros-bancos-e-ias.md)
+- [Operação, testes e troubleshooting](docs/operacao-e-testes.md)
+- [Decisões de arquitetura (ADRs)](docs/decisoes-arquiteturais.md)
+
+---
+
+## Limites atuais
+
+- A persona é declarada por cabeçalho (demonstração). Em produção, troque a
+  dependency por OIDC/JWT e mantenha a matriz de capacidades.
+- A aplicação automática cobre `CREATE INDEX` e `COMMENT ON` em PostgreSQL; para
+  outros tipos de mudança, o fluxo é revisão + aplicação manual.
+- O frontend não tem autenticação própria; ele apenas envia a persona. O backend
+  sempre valida.
+- O armazenamento interno em SQLite é adequado para desenvolvimento, não para
+  produção. Veja o checklist em [Persistência e isolamento](docs/persistencia-e-isolamento.md).
+- A análise com IA depende da disponibilidade e dos limites do provedor.
+
+---
+
+## Segurança em uma frase
+
+O GenomAI lê metadados, propõe mudanças e registra decisões; **quem aprova e quem
+aplica são pessoas identificadas por persona**, e a IA nunca recebe dados de
+linhas nem executa SQL.
